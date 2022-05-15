@@ -71,7 +71,7 @@ namespace ML
 
         //We call this function from the UI when we move the dot
         //PRT maybe sort out this weirdness with the doubles
-        void setXAndYValues(double x, double y)
+        void setXAndYValues (double x, double y)
         {
             xAxisValue = (float)x;
             yAxisValue = (float)y;
