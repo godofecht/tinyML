@@ -18,47 +18,49 @@
 
 using namespace std;
 
-class Neuron;
-typedef vector<std::unique_ptr<Neuron>> Layer;
-class connection
+namespace ML
 {
-public:
-	double weight;
-	double deltaweight;
-
-	void setDW (double dw)
+	class Neuron;
+	typedef vector<std::unique_ptr<Neuron>> Layer;
+	class connection
 	{
-		deltaweight = dw;
-	}
-};
-class Neuron
-{
-public:
-	Neuron (unsigned numOutputs, unsigned myIndex);
-	void feedForward (Layer &prevLayer);
-	double getOutputVal();
-	void setOutputVal (double n);
-	void calcHiddenGradients (const Layer &nextLayer);
-	void calcOutputGradients (double targetVal);
-	void updateInputWeights (Layer &prevLayer);
-    double eta = 0.15;
-    double alpha = 0.5;
-	vector <std::unique_ptr<connection>> outputWeights;
+	public:
+		double weight;
+		double deltaweight;
 
-	double error;
-	double recentAverageError;
-	double recentAverageSmoothingFactor = 100.0;
+		void setDW(double dw)
+		{
+			deltaweight = dw;
+		}
+	};
+	class Neuron
+	{
+	public:
+		Neuron(unsigned numOutputs, unsigned myIndex);
+		void feedForward(Layer& prevLayer);
+		double getOutputVal();
+		void setOutputVal(double n);
+		void calcHiddenGradients(const Layer& nextLayer);
+		void calcOutputGradients(double targetVal);
+		void updateInputWeights(Layer& prevLayer);
+		double eta = 0.15;
+		double alpha = 0.5;
+		vector <std::unique_ptr<connection>> outputWeights;
 
-	int getIndex();
-private:
-	double gradient;
-	double outputVal;
-	static double randomWeight();
-	unsigned index;
-	double sumDOW (const Layer &nextLayer) const;
-	static double transferFunctionDerivative (double x);
-	static double transferFunction (double x);
-};
+		double error;
+		double recentAverageError;
+		double recentAverageSmoothingFactor = 100.0;
 
+		int getIndex();
+	private:
+		double gradient;
+		double outputVal;
+		static double randomWeight();
+		unsigned index;
+		double sumDOW(const Layer& nextLayer) const;
+		static double transferFunctionDerivative(double x);
+		static double transferFunction(double x);
+	};
+}
 
 #endif
