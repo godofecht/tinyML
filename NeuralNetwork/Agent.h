@@ -95,12 +95,8 @@ namespace ML
             results = GetResult();
         }
 
-
-
         //To Do:: Make labelX position itself on X axis
         // Make labelY position itself on Y axis
-
-
     };
 
     template <class T>
@@ -136,6 +132,11 @@ namespace ML
         {
             pointDimensionalData = newPointDimensionalData;
         }
+
+        T operator[] (int index)
+        {
+            return pointDimensionalData [index];
+        }
     };
 
     template <class T>
@@ -143,7 +144,7 @@ namespace ML
     {
     public:
 
-        CyclicBuffer<DataPoint<T>> memory;
+        CyclicBuffer<DataPoint<float>> memory;
 
         // Let's randomly take 16 samples of memory
         LinearRegressor() : memory (16)
@@ -151,31 +152,37 @@ namespace ML
 
         }
 
-        void updateMemory (DataPoint<T> newElement)
+        void updateMemory (DataPoint<float> newElement)
         {
             memory.addElement (newElement);
         }
 
+        float b = 0;
+        float a = 0;
+
         void perform()
         {
             // iterate through all points in memory
-            int sumX = 0;
-            int sumX2 = 0;
-            int sumY = 0;
-            int sumXY = 0;
-            int b = 0;
-            int a = 0;
+            float sumX = 0;
+            float sumX2 = 0;
+            float sumY = 0;
+            float sumXY = 0;
 
-            for (auto dataPoint : memory)
+            //This proves that I should have used a vector instead of a queue.
+            //Iteration should always be element-wise when it CAN be.
+            for (int i = 0; i < memory.size(); ++i)
             {
+                DataPoint<float> dataPoint = memory.front();
                 sumX += dataPoint[0];
                 sumX2 += (dataPoint[0] * dataPoint[0]);
                 sumY += (dataPoint[1]);
                 sumXY += (dataPoint[0] * dataPoint[1]);
+                memory.pop();
+                memory.push (dataPoint);
             }
 
-            b = (memory.size() * sumXY - sumX * sumY) / (memory.size() * sumX2 - sumX * sumX);
-            a = (sumY - b * sumX) / memory.size();
+            b = ((float) memory.size() * sumXY - sumX * sumY) / ((float) memory.size() * sumX2 - sumX * sumX);
+            a = (sumY - b * sumX) / (float) memory.size();
         }
     };
 }
