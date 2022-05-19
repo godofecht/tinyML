@@ -38,6 +38,7 @@ namespace ML
     //Move this to its own spot in another folder.
     //At the moment this is set up to have only 1 hidden layer.
     //Maybe we can allow for more later on.
+    //Please change this to NNMapper or DimensionReducer or smt.
     class LinReg2D : public Agent
     {
     public:
@@ -100,5 +101,81 @@ namespace ML
         // Make labelY position itself on Y axis
 
 
+    };
+
+    template <class T>
+    class CyclicBuffer : public std::queue<T>
+    {
+        int currentIndex = 0;
+        int maxNumElements;
+
+    public:
+
+        CyclicBuffer(int newMaxNumElements)
+        {
+            maxNumElements = newMaxNumElements;
+        }
+
+        void addElement (T newElement)
+        {
+            if (std::queue<T>::size() > maxNumElements)
+            {
+                std::queue<T>::pop();
+            }
+            std::queue<T>::push (newElement);
+        }
+    };
+
+    template <class T>
+    class DataPoint
+    {
+    public:
+        std::vector<T> pointDimensionalData;
+
+        DataPoint (std::vector<T> newPointDimensionalData)
+        {
+            pointDimensionalData = newPointDimensionalData;
+        }
+    };
+
+    template <class T>
+    class LinearRegressor
+    {
+    public:
+
+        CyclicBuffer<DataPoint<T>> memory;
+
+        // Let's randomly take 16 samples of memory
+        LinearRegressor() : memory (16)
+        {
+
+        }
+
+        void updateMemory (DataPoint<T> newElement)
+        {
+            memory.addElement (newElement);
+        }
+
+        void perform()
+        {
+            // iterate through all points in memory
+            int sumX = 0;
+            int sumX2 = 0;
+            int sumY = 0;
+            int sumXY = 0;
+            int b = 0;
+            int a = 0;
+
+            for (auto dataPoint : memory)
+            {
+                sumX += dataPoint[0];
+                sumX2 += (dataPoint[0] * dataPoint[0]);
+                sumY += (dataPoint[1]);
+                sumXY += (dataPoint[0] * dataPoint[1]);
+            }
+
+            b = (memory.size() * sumXY - sumX * sumY) / (memory.size() * sumX2 - sumX * sumX);
+            a = (sumY - b * sumX) / memory.size();
+        }
     };
 }
