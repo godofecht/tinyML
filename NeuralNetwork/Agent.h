@@ -52,7 +52,7 @@ namespace ML
 
         std::vector<double> results;
 
-        LinReg2D(int numParameters, int numHiddenLayerUnits) :
+        LinReg2D (int numParameters, int numHiddenLayerUnits) :
             Agent({ 2, (unsigned)numHiddenLayerUnits, (unsigned)numParameters })
         {
             xAxisValue = 0.0f;
