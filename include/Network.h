@@ -16,29 +16,19 @@ namespace ML
 	class Network
 	{
 	public:
-		Network(const vector <unsigned>& topology);
-		void backPropagate(const vector <double>& targetVals);
-		void feedForward(vector <double>& inputVals);
-		void getResults(vector <double>& resultVals);
-		double getRecentAverageError(void) const { return recentAverageError; }
+		Network (const std::vector <unsigned>& topology);
+		void backPropagate (const std::vector <double>& targetVals);
+		void feedForward (std::vector <double> inputVals); //TODO: make const
+		void getResults (std::vector <double>& resultVals) const;
+		void putWeights (const std::vector<double>& weights);
+		void updateWeights();
+		void normalizeWeights (int connection_index);
+		std::vector<Layer>& GetLayers() { return layers; }
+		double getRecentAverageError (void) const { return recentAverageError; }
 
-		vector<double> GetWeights() const;
-		void PutWeights(vector<double>& weights);
+		std::vector<double> getWeights() const;
 
-		void UpdateWeights();
-
-		void NormalizeWeights(int connection_index);
-
-
-		//Change m_layers to layers
-		vector<Layer>& GetLayers()
-		{
-			return m_layers;
-		}
-
-		//      bool NORMALIZE_WEIGHTS;
-
-		vector <Layer> m_layers;
+		std::vector <Layer> layers;
 	private:
 		double gradient = 0.0;
 		double error = 0.0;

@@ -17,16 +17,16 @@
 namespace ML
 {
     /**
-     * @brief The Model class encapsulates a neural network, providing methods to train,
+     * @brief The Model class encapsulates the Network class, providing methods to train,
      * update, and query the network. It also includes utilities for saving and loading weights.
      * 
      * Usage:
      * 
      * 1. Initialize the Model with a topology (vector<unsigned>) defining the number of neurons in each layer.
-     * 2. Use the `FeedForward` method to pass inputs through the network.
-     * 3. Use the `GetResult` method to obtain the network's output.
-     * 4. Use the `BackPropagate` method to train the network with target values.
-     * 5. Save and load weights using `SaveWeightsToFile` and `LoadWeightsFromFile`.
+     * 2. Use the `feedForward` method to pass inputs through the network.
+     * 3. Use the `getResult` method to obtain the network's output.
+     * 4. Use the `backPropagate` method to train the network with target values.
+     * 5. Save and load weights using `saveWeightsToFile` and `loadWeightsFromFile`.
      * 
      * Example:
      * 
@@ -70,7 +70,7 @@ namespace ML
          * 
          * @param tp A vector representing the new topology.
          */
-        void SetTopology(const std::vector<unsigned>& tp)
+        void setTopology(const std::vector<unsigned>& tp)
         {
             topology = tp;
             thisNetwork = Network(tp);  // Reinitialize the network with the new topology
@@ -81,7 +81,7 @@ namespace ML
          * 
          * @param targetVals The expected output values used for training.
          */
-        void BackPropagate(const std::vector<double>& targetVals)
+        void backPropagate(const std::vector<double>& targetVals)
         {
             thisNetwork.backPropagate(targetVals);
         }
@@ -93,7 +93,7 @@ namespace ML
          * 
          * @return Network* A pointer to the internal Network object.
          */
-        Network* GetNetwork()
+        Network* getNetwork()
         {
             return &thisNetwork;
         }
@@ -105,9 +105,9 @@ namespace ML
          * 
          * @return std::vector<double> A vector containing the current weights of the network.
          */
-        std::vector<double> GetWeights()
+        std::vector<double> getWeights()
         {
-            weights = thisNetwork.GetWeights();  // Update the cached weights
+            weights = thisNetwork.getWeights();  // Update the cached weights
             return weights;
         }
 
@@ -118,10 +118,10 @@ namespace ML
          * 
          * @param inputs A vector of input values corresponding to the input layer of the network.
          */
-        void FeedForward(const std::vector<double>& inputs)
+        void feedForward (std::vector<double> inputs)
         {
-            assert(inputs.size() == topology.front());  // Ensure the input size matches the network input layer
-            thisNetwork.feedForward(inputs);
+            assert (inputs.size() == topology.front());  // Ensure the input size matches the network input layer
+            thisNetwork.feedForward (inputs);
         }
 
         /**
@@ -131,10 +131,10 @@ namespace ML
          * 
          * @return std::vector<double> A vector containing the output values from the network.
          */
-        std::vector<double> GetResult()
+        std::vector<double> getResult() const
         {
             std::vector<double> resultVals;
-            thisNetwork.getResults(resultVals);
+            thisNetwork.getResults (resultVals);
             return resultVals;
         }
 
@@ -145,9 +145,9 @@ namespace ML
          * 
          * @param newWeights A vector containing the new weights to be applied to the network.
          */
-        void SetWeights(const std::vector<double>& newWeights)
+        void setWeights(const std::vector<double>& newWeights)
         {
-            thisNetwork.PutWeights(newWeights);
+            thisNetwork.putWeights(newWeights);
         }
 
         /**
@@ -155,7 +155,7 @@ namespace ML
          * 
          * This function prints the number of neurons in each layer of the network to the console.
          */
-        void DisplayTopology() const
+        void displayTopology() const
         {
             std::cout << "Network Topology:\n";
             for (unsigned layerSize : topology)
@@ -169,9 +169,9 @@ namespace ML
          * 
          * This function applies updates to the weights based on the training (backpropagation) process.
          */
-        void UpdateWeights()
+        void updateWeights()
         {
-            thisNetwork.UpdateWeights();
+            thisNetwork.updateWeights();
         }
 
         /**
@@ -179,10 +179,10 @@ namespace ML
          * 
          * This function prints the current weights of the network to the console.
          */
-        void DisplayWeights() const
+        void displayWeights() const
         {
             std::cout << "Network Weights:\n";
-            const std::vector<double>& currentWeights = const_cast<Model*>(this)->GetWeights();
+            const std::vector<double>& currentWeights = const_cast<Model*>(this)->getWeights();
             for (double weight : currentWeights)
             {
                 std::cout << weight << " ";
@@ -197,7 +197,7 @@ namespace ML
          * 
          * @param filename The name of the file where weights will be saved.
          */
-        void SaveWeightsToFile(const std::string& filename) const
+        void saveWeightsToFile(const std::string& filename) const
         {
             std::ofstream outFile(filename);
             if (!outFile)
@@ -206,7 +206,7 @@ namespace ML
                 return;
             }
 
-            const std::vector<double>& currentWeights = const_cast<Model*>(this)->GetWeights();
+            const std::vector<double>& currentWeights = const_cast<Model*>(this)->getWeights();
             for (double weight : currentWeights)
             {
                 outFile << weight << "\n";
@@ -221,7 +221,7 @@ namespace ML
          * 
          * @param filename The name of the file from which to load weights.
          */
-        void LoadWeightsFromFile(const std::string& filename)
+        void loadWeightsFromFile (const std::string& filename)
         {
             std::ifstream inFile(filename);
             if (!inFile)
@@ -239,7 +239,7 @@ namespace ML
 
             if (!newWeights.empty())
             {
-                SetWeights(newWeights);
+                setWeights(newWeights);
             }
 
             inFile.close();
