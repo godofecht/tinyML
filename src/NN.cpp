@@ -41,6 +41,11 @@ namespace ML
         outputVal = Neuron::transferFunction(sum);
     }
 
+    double Neuron::getOutputVal() const
+    {
+        return outputVal;
+    }
+
     void Neuron::updateInputWeights(Layer& prevLayer)
     {
         for (auto& neuron : prevLayer) {
@@ -73,11 +78,6 @@ namespace ML
     double Neuron::transferFunction(double x)
     {
         return tanh(x);
-    }
-
-    double Neuron::getOutputVal() const
-    {
-        return outputVal;
     }
 
     void Neuron::setOutputVal(double value)
