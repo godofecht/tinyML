@@ -9,100 +9,84 @@
 
 namespace ML
 {
-	Neuron::Neuron(unsigned numOutputs, unsigned newIndex)
-	{
-		error = 0.0f;
-		gradient = 0.0f;
-		outputVal = 0.0f;
-		recentAverageError = 0.0f;
+    Neuron::Neuron(unsigned numOutputs, unsigned neuronIndex)
+        : error(0.0f), gradient(0.0f), outputVal(0.0f), recentAverageError(0.0f), index(neuronIndex)
+    {
+        outputWeights.reserve(numOutputs);
+        for (unsigned i = 0; i < numOutputs; ++i) {
+            auto connectionPtr = std::make_unique<connection>();
+            connectionPtr->weight = static_cast<double>(rand()) / RAND_MAX;
+            outputWeights.push_back(std::move(connectionPtr));
+        }
+    }
 
-		for (unsigned c = 0; c < numOutputs; ++c) {
-			outputWeights.push_back (std::make_unique<connection>());
-			outputWeights[c]->weight = ((rand() / double(RAND_MAX)));
-		}
+    void Neuron::calcHiddenGradients(const Layer& nextLayer)
+    {
+        double dow = sumDOW(nextLayer);
+        gradient = dow * Neuron::transferFunctionDerivative(outputVal);
+    }
 
-		index = newIndex;
-	}
+    void Neuron::calcOutputGradients(double targetVal)
+    {
+        double delta = targetVal - outputVal;
+        gradient = delta * Neuron::transferFunctionDerivative(outputVal);
+    }
 
-	void Neuron::calcHiddenGradients(const Layer& nextLayer)
-	{
-		double dow = sumDOW(nextLayer);
-		gradient = dow * Neuron::transferFunctionDerivative(outputVal);
-	}
-	void Neuron::calcOutputGradients(double targetVal)
-	{
-		double delta = targetVal - outputVal;
-		gradient = delta * Neuron::transferFunctionDerivative(outputVal);
-	}
+    void Neuron::feedForward(Layer& prevLayer)
+    {
+        double sum = 0.0;
+        for (const auto& neuron : prevLayer) {
+            sum += neuron->getOutputVal() * neuron->outputWeights[index]->weight;
+        }
+        outputVal = Neuron::transferFunction(sum);
+    }
 
-	void Neuron::feedForward(Layer& prevLayer)
-	{
-		double sum = 0.0;
-		for (unsigned n = 0; n < prevLayer.size(); ++n) {
-			double outputVal = prevLayer[n]->getOutputVal();
-			double weight = prevLayer[n]->outputWeights[index]->weight;
-			sum += (outputVal * weight);
-		}
-		outputVal = Neuron::transferFunction(sum);
-	}
+    void Neuron::updateInputWeights(Layer& prevLayer)
+    {
+        for (auto& neuron : prevLayer) {
+            double oldDeltaWeight = neuron->outputWeights[index]->deltaweight;
+            double newDeltaWeight = eta * neuron->getOutputVal() * gradient + alpha * oldDeltaWeight;
+            neuron->outputWeights[index]->deltaweight = newDeltaWeight;
+            neuron->outputWeights[index]->weight += newDeltaWeight;
+        }
+    }
 
-	void Neuron::updateInputWeights(Layer& prevLayer)
-	{
-		for (unsigned n = 0; n < prevLayer.size(); ++n) {
-			Neuron* neuron = prevLayer[n].get();
-			double oldDeltaWeight = neuron->outputWeights[index]->deltaweight;
+    double Neuron::randomWeight()
+    {
+        return static_cast<double>(rand()) / RAND_MAX;
+    }
 
-			double newDeltaWeight =
-				// Individual input is magnified by the gradient and train rate:
-				eta
-				* neuron->getOutputVal()
-				* gradient
-				// Also adding momentum = a fraction of the previous delta weight;
-				+ alpha
-				* oldDeltaWeight;
+    double Neuron::sumDOW(const Layer& nextLayer) const
+    {
+        double sum = 0.0;
+        for (unsigned i = 0; i < nextLayer.size() - 1; ++i) {
+            sum += outputWeights[i]->weight * nextLayer[i]->gradient;
+        }
+        return sum;
+    }
 
-			neuron->outputWeights[index]->deltaweight = newDeltaWeight;
-			neuron->outputWeights[index]->weight += newDeltaWeight;
-		}
-	}
+    double Neuron::transferFunctionDerivative(double x)
+    {
+        return 1.0 - x * x;
+    }
 
-	double Neuron::randomWeight()
-	{
-		return (rand() / double(RAND_MAX));
-	}
-	double Neuron::sumDOW(const Layer& nextLayer) const
-	{
-		double sum = 0.0;
+    double Neuron::transferFunction(double x)
+    {
+        return tanh(x);
+    }
 
-		// Sum our contributions of the errors at the nodes we feed.
+    double Neuron::getOutputVal() const
+    {
+        return outputVal;
+    }
 
-		for (unsigned n = 0; n < nextLayer.size() - 1; ++n) {
-			sum += outputWeights[n]->weight * nextLayer[n]->gradient;
-		}
+    void Neuron::setOutputVal(double value)
+    {
+        outputVal = value;
+    }
 
-		return sum;
-	}
-
-	double Neuron::transferFunctionDerivative(double x)
-	{
-		return 1 - x * x;
-	}
-	double Neuron::transferFunction(double x)
-	{
-		return tanh(x);
-	}
-
-	double Neuron::getOutputVal()
-	{
-		return outputVal;
-	}
-	void Neuron::setOutputVal(double n)
-	{
-		outputVal = n;
-	}
-
-	int Neuron::getIndex()
-	{
-		return index;
-	}
+    int Neuron::getIndex() const
+    {
+        return index;
+    }
 }
