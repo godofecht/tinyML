@@ -2,12 +2,14 @@
 
 This repository contains a simple implementation of a Perceptron model for solving binary classification problems. The implementation includes training, evaluation, and various tests to ensure the correctness of the network, including checking the transfer function and ensuring proper training convergence. This project is focused on tiny machine learning (TinyML), targeting CPU-efficient models for simple tasks.
 
+The original motivation of this repository is to add foundational real-time support for small machine learning models that are more suited for solving data related problems, such as parameter mappings, linear regression, and more.
+
 ## Features
 
 - **Perceptron Implementation**: A basic neural network model with a single-layer perceptron that can be trained for binary classification tasks.
-- **Examples**: Demonstrates the perceptron solving the classic logic gate problem, which is a fundamental binary classification task.
+- **Examples**: Demonstrates how the Perceptron class can be used to solve classic logic gate problem, which is a fundamental binary classification task.
 - **Extensive Testing**: Includes tests to verify the network's weight initialization, feedforward mechanism, transfer function correctness, and training convergence.
-- **CPU Efficient**: The perceptron is designed to be lightweight and CPU-efficient, making it suitable for TinyML applications.
+- **CPU Efficient**: The perceptron is designed to be lightweight and CPU-efficient, making it suitable for small ML applications.
 
 ## Installation
 
