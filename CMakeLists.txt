@@ -10,7 +10,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 # Add the include directory so that the compiler can find header files
-include_directories(${PROJECT_SOURCE_DIR}/include)
+# This makes sure both the library and test target have the correct include paths
+target_include_directories(TinyML PUBLIC ${PROJECT_SOURCE_DIR}/include)
 
 # Collect all source files from the src directory
 file(GLOB_RECURSE SOURCES "src/*.cpp")
@@ -39,7 +40,7 @@ add_executable(TinyMLTests ${TEST_SOURCES})
 # Link the test executable with Google Test and your library
 target_link_libraries(TinyMLTests TinyML gtest gtest_main)
 
-# Make sure the test target can access the same include directories as the main library
+# Ensure the test target also gets the correct include directories
 target_include_directories(TinyMLTests PUBLIC ${PROJECT_SOURCE_DIR}/include)
 
 # Add test to CMake's testing framework
