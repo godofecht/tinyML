@@ -22,9 +22,8 @@ jobs:
     - name: Build and install Google Test
       run: |
         cd /usr/src/gtest
-        sudo cmake -DBUILD_SHARED_LIBS=ON .
+        sudo cmake .
         sudo make
-        sudo cp *.so /usr/lib
         sudo cp *.a /usr/lib
 
     - name: Create build directory
