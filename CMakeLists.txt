@@ -18,6 +18,9 @@ file(GLOB_RECURSE SOURCES "src/*.cpp")
 # Create the main library target
 add_library(TinyML ${SOURCES})
 
+# Ensure that the include directories for the library are available to targets that link with the library
+target_include_directories(TinyML PUBLIC ${PROJECT_SOURCE_DIR}/include)
+
 # GoogleTest integration (optional)
 include(FetchContent)
 FetchContent_Declare(
@@ -35,6 +38,9 @@ add_executable(TinyMLTests ${TEST_SOURCES})
 
 # Link the test executable with Google Test and your library
 target_link_libraries(TinyMLTests TinyML gtest gtest_main)
+
+# Make sure the test target can access the same include directories as the main library
+target_include_directories(TinyMLTests PUBLIC ${PROJECT_SOURCE_DIR}/include)
 
 # Add test to CMake's testing framework
 add_test(NAME TinyMLTests COMMAND TinyMLTests)
