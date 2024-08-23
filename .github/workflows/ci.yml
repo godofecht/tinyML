@@ -24,8 +24,7 @@ jobs:
         cd /usr/src/gtest
         sudo cmake .
         sudo make
-        sudo cp lib/*.so /usr/lib
-        sudo cp *.a /usr/lib
+        sudo cp lib/*.a /usr/lib
 
     - name: Create build directory
       run: mkdir -p build
