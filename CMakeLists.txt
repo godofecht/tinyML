@@ -9,10 +9,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 # Set output directories for binaries
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# Add the include directory so that the compiler can find header files
-# This makes sure both the library and test target have the correct include paths
-target_include_directories(TinyML PUBLIC ${PROJECT_SOURCE_DIR}/include)
-
 # Collect all source files from the src directory
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
