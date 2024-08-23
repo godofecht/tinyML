@@ -1,5 +1,5 @@
 #include <gtest/gtest.h>
-#include "perceptron.h"
+#include "Perceptron.h"
 #include "logger.h"
 
 // Loading and Sanity Checks
