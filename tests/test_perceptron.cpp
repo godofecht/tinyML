@@ -48,10 +48,14 @@ TEST(PerceptronTest, TrainingConvergence)
     ML::Models::Perceptron perceptron(topology);
 
     std::vector<std::pair<std::vector<double>, std::vector<double>>> nandTrainingSet = {
-        {{0, 0}, {1}},
-        {{0, 1}, {1}},
-        {{1, 0}, {1}},
-        {{1, 1}, {0}}
+        {{0, 0, 0}, {1}},
+        {{0, 0, 1}, {1}},
+        {{0, 1, 0}, {1}},
+        {{0, 1, 1}, {1}},
+        {{1, 0, 0}, {1}},
+        {{1, 0, 1}, {1}},
+        {{1, 1, 0}, {1}},
+        {{1, 1, 1}, {0}}
     };
 
     // Train the network
@@ -67,15 +71,23 @@ TEST(PerceptronTest, TrainingConvergence)
     // After training, evaluate the performance
     double tolerance = 0.01;
 
-    auto output_00 = perceptron.process({0, 0})[0];
-    auto output_01 = perceptron.process({0, 1})[0];
-    auto output_10 = perceptron.process({1, 0})[0];
-    auto output_11 = perceptron.process({1, 1})[0];
+    auto output_000 = perceptron.process({0, 0, 0})[0];
+    auto output_001 = perceptron.process({0, 0, 1})[0];
+    auto output_010 = perceptron.process({0, 1, 0})[0];
+    auto output_011 = perceptron.process({0, 1, 1})[0];
+    auto output_100 = perceptron.process({1, 0, 0})[0];
+    auto output_101 = perceptron.process({1, 0, 1})[0];
+    auto output_110 = perceptron.process({1, 1, 0})[0];
+    auto output_111 = perceptron.process({1, 1, 1})[0];
 
-    ASSERT_NEAR(output_00, 1.0, tolerance);
-    ASSERT_NEAR(output_01, 1.0, tolerance);
-    ASSERT_NEAR(output_10, 1.0, tolerance);
-    ASSERT_NEAR(output_11, 0.0, tolerance);
+    ASSERT_NEAR(output_000, 1.0, tolerance);
+    ASSERT_NEAR(output_001, 1.0, tolerance);
+    ASSERT_NEAR(output_010, 1.0, tolerance);
+    ASSERT_NEAR(output_011, 1.0, tolerance);
+    ASSERT_NEAR(output_100, 1.0, tolerance);
+    ASSERT_NEAR(output_101, 1.0, tolerance);
+    ASSERT_NEAR(output_110, 1.0, tolerance);
+    ASSERT_NEAR(output_111, 0.0, tolerance);
 }
 
 // TEST(PerceptronTest, GradientCheck)
@@ -170,7 +182,7 @@ TEST (PerceptronTest, NANDTrainingAndEvaluation)
 {
     LoggerNS::Logger logger (LoggerNS::Logger::VerbosityLevel::INFO);
 
-    std::vector<unsigned> topology = {3, 4, 1};
+    std::vector<unsigned> topology = {2, 2, 1};
     ML::Models::Perceptron perceptron (topology);
 
     std::vector<std::pair<std::vector<double>, std::vector<double>>> nandTrainingSet = {
@@ -260,7 +272,7 @@ TEST (PerceptronTest, XNORTrainingAndEvaluation)
 {
     LoggerNS::Logger logger (LoggerNS::Logger::VerbosityLevel::INFO);
 
-    std::vector<unsigned> topology = {3, 4, 1};
+    std::vector<unsigned> topology = {2, 2, 1};
     ML::Models::Perceptron perceptron (topology);
 
     std::vector<std::pair<std::vector<double>, std::vector<double>>> xnorTrainingSet = {
@@ -318,7 +330,7 @@ TEST (PerceptronTest, HalfAdderCarryTrainingAndEvaluation)
 {
     LoggerNS::Logger logger (LoggerNS::Logger::VerbosityLevel::INFO);
 
-    std::vector<unsigned> topology = {3, 4, 1};
+    std::vector<unsigned> topology = {2, 2, 1};
     ML::Models::Perceptron perceptron (topology);
 
     std::vector<std::pair<std::vector<double>, std::vector<double>>> halfAdderCarryTrainingSet = {
