@@ -15,6 +15,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <atomic>
+#include <chrono>
 
 namespace ML {
 namespace RealTime {
@@ -49,47 +50,58 @@ public:
     StreamingTransformer(const Config& config);
     ~StreamingTransformer();
 
-    // Real-time inference interface
-    std::vector<float> process(const std::vector<float>& input);
-    
     // Streaming interface for continuous data
     void start_stream();
-    void push_chunk(const std::vector<float>& chunk);
-    std::vector<float> get_output();
     void stop_stream();
+    void process_token(const std::vector<float>& token_embedding);
+    std::vector<float> get_next_output();
+
+    // Inference interface
+    std::vector<float> forward_single(const std::vector<float>& input);
+    std::vector<float> forward(const std::vector<std::vector<float>>& sequence);
     
     // Adaptive optimization
-    void optimize_for_latency(float target_ms);
-    void optimize_for_memory(size_t max_bytes);
+    void optimize_for_latency();
+    void optimize_for_memory();
     
     // Performance monitoring
-    float get_average_latency() const;
     size_t get_memory_usage() const;
-    float get_throughput() const;
+    float get_throughput_tokens_per_second() const;
+    bool meets_latency_target() const;
+    bool meets_memory_target() const;
+
+    // Configuration
+    const Config& get_config() const;
 
 private:
     Config config_;
-    std::vector<std::unique_ptr<TransformerBlock>> layers_;
+    std::vector<std::unique_ptr<TransformerBlock>> blocks_;
+    std::vector<float> embedding_weights_;
+    std::vector<float> position_embeddings_;
+    bool use_simd_ = false;
     
     // Streaming state
     std::queue<std::vector<float>> input_queue_;
     std::queue<std::vector<float>> output_queue_;
-    std::mutex queue_mutex_;
-    std::condition_variable queue_cv_;
+    std::mutex stream_mutex_;
+    std::condition_variable stream_cv_;
     std::atomic<bool> streaming_active_{false};
     std::thread processing_thread_;
-    
+
     // Performance tracking
-    std::vector<float> latency_samples_;
-    mutable std::mutex performance_mutex_;
-    std::atomic<float> average_latency_{0.0f};
-    std::atomic<size_t> memory_usage_{0};
-    std::atomic<float> throughput_{0.0f};
-    
+    std::atomic<size_t> total_tokens_processed_{0};
+    std::atomic<float> current_latency_ms_{0.0f};
+    std::chrono::steady_clock::time_point start_time_;
+
     // Internal processing
-    void processing_loop();
-    std::vector<float> forward_pass(const std::vector<float>& input);
-    void update_performance_metrics(float latency, size_t memory_used);
+    void process_stream();
+};
+
+class RealTimeTransformerFactory {
+public:
+    static std::unique_ptr<StreamingTransformer> create_for_edge(size_t vocab_size, float target_latency_ms);
+    static std::unique_ptr<StreamingTransformer> create_for_mobile(size_t vocab_size, float target_latency_ms);
+    static std::unique_ptr<StreamingTransformer> create_for_server(size_t vocab_size, float target_latency_ms);
 };
 
 /**
@@ -209,48 +221,6 @@ private:
 };
 
 /**
- * @brief Complete transformer block with adaptive computation
- * 
- * Combines attention, feed-forward, and normalization layers with
- * dynamic optimization based on input complexity and resource constraints.
- */
-class TransformerBlock {
-public:
-    TransformerBlock(size_t d_model, size_t n_heads, size_t d_ff, float dropout = 0.1f);
-    
-    void forward(const std::vector<float>& input, 
-                std::vector<float>& output,
-                bool use_cache = true);
-    
-    // Adaptive computation based on input complexity
-    float compute_complexity(const std::vector<float>& input);
-    void set_computation_budget(float budget_factor); // 0.0 to 1.0
-    
-    // Memory management
-    void clear_cache();
-    size_t get_cache_size() const;
-
-private:
-    std::unique_ptr<MultiHeadAttention> attention_;
-    std::unique_ptr<FeedForwardLayer> feed_forward_;
-    std::unique_ptr<LayerNorm> norm1_;
-    std::unique_ptr<LayerNorm> norm2_;
-    
-    // Cache for streaming inference
-    std::vector<float> key_cache_;
-    std::vector<float> value_cache_;
-    
-    // Adaptive computation state
-    float computation_budget_{1.0f};
-    bool use_fast_path_{false};
-    
-    // Temporary buffers
-    std::vector<float> attention_output_;
-    std::vector<float> ff_output_;
-    std::vector<float> norm_output_;
-};
-
-/**
  * @brief Dynamic neural network with adaptive architecture
  * 
  * Self-optimizing neural network that can adjust its topology,
@@ -309,5 +279,56 @@ private:
 
 } // namespace RealTime
 } // namespace ML
+
+namespace TinyML {
+
+class RealTimeTransformer {
+public:
+    RealTimeTransformer(size_t embed_dim, size_t num_heads, size_t num_layers)
+        : transformer_(ML::RealTime::StreamingTransformer::Config{
+              1000,
+              embed_dim,
+              num_heads,
+              num_layers,
+              embed_dim * 4,
+              0.1f,
+              512,
+              1.0f,
+              5}) {}
+
+    std::vector<float> forward(const std::vector<float>& input) {
+        return transformer_.forward_single(input);
+    }
+
+    std::vector<float> forward_batch(const std::vector<std::vector<float>>& inputs) {
+        return transformer_.forward(inputs);
+    }
+
+    void start_stream() {
+        transformer_.start_stream();
+    }
+
+    std::vector<float> process_chunk(const std::vector<float>& chunk) {
+        transformer_.process_token(chunk);
+        return transformer_.get_next_output();
+    }
+
+    void end_stream() {
+        transformer_.stop_stream();
+    }
+
+    void optimize_for_latency() {
+        transformer_.optimize_for_latency();
+    }
+
+    void optimize_for_memory() {
+        transformer_.optimize_for_memory();
+    }
+
+private:
+    ML::RealTime::StreamingTransformer transformer_;
+};
+
+} // namespace TinyML
 
 #endif // REALTIME_TRANSFORMER_H

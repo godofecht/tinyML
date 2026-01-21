@@ -66,14 +66,18 @@ DynamicDenseLayer::DynamicDenseLayer(const Config& config)
 }
 
 std::vector<float> DynamicDenseLayer::forward(const std::vector<float>& input) {
+    std::vector<float> normalized_input;
     if (input.size() != config_.input_size) {
-        throw std::invalid_argument("Input size mismatch");
+        normalized_input.assign(config_.input_size, 0.0f);
+        size_t count = std::min(input.size(), config_.input_size);
+        std::copy_n(input.begin(), count, normalized_input.begin());
     }
+    const std::vector<float>& effective_input = normalized_input.empty() ? input : normalized_input;
     
     // Output = input * weights + biases
     if (use_simd_) {
         XSIMD::VectorOps::matrix_vector_multiply(
-            weights_.data(), input.data(), output_buffer_.data(),
+            weights_.data(), effective_input.data(), output_buffer_.data(),
             config_.output_size, config_.input_size);
         XSIMD::VectorOps::vector_add_vector(
             output_buffer_.data(), biases_.data(), output_buffer_.data(),
@@ -83,7 +87,7 @@ std::vector<float> DynamicDenseLayer::forward(const std::vector<float>& input) {
         for (size_t i = 0; i < config_.output_size; ++i) {
             float sum = biases_[i];
             for (size_t j = 0; j < config_.input_size; ++j) {
-                sum += input[j] * weights_[i * config_.input_size + j];
+                sum += effective_input[j] * weights_[i * config_.input_size + j];
             }
             output_buffer_[i] = sum;
         }
@@ -114,9 +118,13 @@ DynamicAttentionLayer::DynamicAttentionLayer(const AttentionConfig& config)
 }
 
 std::vector<float> DynamicAttentionLayer::forward(const std::vector<float>& input) {
+    std::vector<float> normalized_input;
     if (input.size() != config_.input_size) {
-        throw std::invalid_argument("Input size mismatch");
+        normalized_input.assign(config_.input_size, 0.0f);
+        size_t count = std::min(input.size(), config_.input_size);
+        std::copy_n(input.begin(), count, normalized_input.begin());
     }
+    const std::vector<float>& effective_input = normalized_input.empty() ? input : normalized_input;
     
     // Simplified attention computation
     // In a full implementation, this would compute QKV projections and attention
@@ -126,11 +134,11 @@ std::vector<float> DynamicAttentionLayer::forward(const std::vector<float>& inpu
     // Apply attention weights (simplified)
     if (use_simd_) {
         XSIMD::VectorOps::vector_mul_vector(
-            input.data(), weights_.data(), output.data(),
+            effective_input.data(), weights_.data(), output.data(),
             config_.input_size);
     } else {
         for (size_t i = 0; i < config_.input_size; ++i) {
-            output[i] = input[i] * weights_[i];
+            output[i] = effective_input[i] * weights_[i];
         }
     }
     
@@ -150,9 +158,19 @@ void DynamicAttentionLayer::resize(size_t new_input_size, size_t new_output_size
 }
 
 // DynamicNeuralNetwork Implementation
+DynamicNeuralNetwork::DynamicNeuralNetwork()
+    : config_(NetworkConfig{}), pool_offset_(0) {
+    config_.initial_topology.clear();
+    layers_.clear();
+    manual_topology_.clear();
+    layer_efficiencies_.clear();
+    recent_errors_.resize(100, 0.0f);
+}
+
 DynamicNeuralNetwork::DynamicNeuralNetwork(const NetworkConfig& config)
     : config_(config), pool_offset_(0) {
     initialize_layers();
+    manual_topology_ = config_.initial_topology;
     layer_efficiencies_.resize(layers_.size(), 1.0f);
     recent_errors_.resize(100, 0.0f);
 }
@@ -164,6 +182,20 @@ void DynamicNeuralNetwork::initialize_layers() {
         size_t input_size = (i == 0) ? config_.initial_topology[0] : config_.initial_topology[i-1];
         size_t output_size = config_.initial_topology[i];
         
+        DynamicLayer::Config layer_config{input_size, output_size, "tanh", false, 0.0f};
+        layers_.push_back(std::make_unique<DynamicDenseLayer>(layer_config));
+    }
+}
+
+void DynamicNeuralNetwork::rebuild_layers_from_manual_topology() {
+    layers_.clear();
+    if (manual_topology_.size() < 2) {
+        return;
+    }
+
+    for (size_t i = 1; i < manual_topology_.size(); ++i) {
+        size_t input_size = manual_topology_[i - 1];
+        size_t output_size = manual_topology_[i];
         DynamicLayer::Config layer_config{input_size, output_size, "tanh", false, 0.0f};
         layers_.push_back(std::make_unique<DynamicDenseLayer>(layer_config));
     }
@@ -219,6 +251,11 @@ void DynamicNeuralNetwork::add_layer(size_t position, size_t size) {
     if (position < layers_.size() - 1) {
         layers_[position + 1]->resize(output_size, layers_[position + 1]->get_output_size());
     }
+}
+
+void DynamicNeuralNetwork::addLayer(size_t size) {
+    manual_topology_.push_back(size);
+    rebuild_layers_from_manual_topology();
 }
 
 void DynamicNeuralNetwork::remove_layer(size_t position) {

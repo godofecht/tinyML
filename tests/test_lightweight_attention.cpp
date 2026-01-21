@@ -45,6 +45,8 @@ void test_lightweight_attention() {
     auto duration = duration_cast<microseconds>(end - start);
     
     // Validate output
+    std::cout << "Output size: " << output.size()
+              << " (expected: " << config.embed_dim << ")\n";
     assert(output.size() == config.embed_dim);
     std::cout << "Forward pass completed in " << duration.count() << " microseconds\n";
     std::cout << "Output dimension: " << output.size() << "\n";

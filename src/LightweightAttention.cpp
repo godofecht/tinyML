@@ -125,7 +125,8 @@ std::vector<float> LightweightAttention::forward(const std::vector<float>& input
     // Step 5: Compute final output projection
     compute_output_projection();
     
-    return output_buffer_;
+    return std::vector<float>(output_buffer_.begin(),
+                              output_buffer_.begin() + config_.embed_dim);
 }
 
 void LightweightAttention::compute_qkv(const std::vector<float>& input) {

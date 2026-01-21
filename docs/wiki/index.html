@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>tinyML Wiki</title>
+  <link rel="stylesheet" href="wiki.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/atom-one-light.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" />
+</head>
+<body>
+  <div class="bg-grid" aria-hidden="true"></div>
+  <div class="layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-title">tinyML Wiki</div>
+        <div class="brand-sub">Docs, blog, and research notes</div>
+      </div>
+      <div class="search-wrap">
+        <input id="nav-search" type="search" placeholder="Search titles" autocomplete="off" />
+      </div>
+      <div id="nav-sections" class="nav-sections"></div>
+      <div class="sidebar-footer">
+        <span id="doc-count">0 docs</span>
+      </div>
+    </aside>
+
+    <main class="content">
+      <header class="content-header">
+        <div id="breadcrumbs" class="breadcrumbs">TinyML / Wiki</div>
+        <h1 id="doc-title" class="doc-title">Welcome</h1>
+        <p class="doc-subtitle">Select an entry on the left to get started.</p>
+      </header>
+
+      <section class="content-body">
+        <article id="doc-content" class="markdown-body">
+          <h2>Welcome</h2>
+          <p>This wiki renders the project documentation and blog posts in one place.</p>
+          <h2>Why Build This When TensorFlow Exists?</h2>
+          <p>TensorFlow is excellent for training and large-scale deployment, but tinyML targets a different set of constraints: ultra-low latency, tiny memory budgets, and predictable performance on edge CPUs. This project exists to push real-time inference into places where full ML stacks are too heavy.</p>
+          <h3>What tinyML Is Better At</h3>
+          <ul>
+            <li>Sub-millisecond inference on CPU-only devices</li>
+            <li>Tight memory footprints for embedded and mobile targets</li>
+            <li>Deterministic latency for real-time systems</li>
+            <li>Focused, optimized kernels instead of general-purpose graphs</li>
+          </ul>
+          <h3>Potential Use Cases</h3>
+          <ul>
+            <li>On-device personalization and adaptive inference</li>
+            <li>Streaming and real-time signal processing</li>
+            <li>IoT analytics with strict power and memory limits</li>
+            <li>Privacy-sensitive workloads that must stay on-device</li>
+          </ul>
+          <h2>How tinyML Compares</h2>
+          <h3>RTNeural</h3>
+          <p>RTNeural is a focused real-time inference engine for audio DSP use cases. tinyML covers a broader range of model families (attention, transformers, GNNs, PINNs, RL) and targets a wider set of edge applications beyond audio, while still prioritizing real-time CPU performance.</p>
+          <h3>ANIRA</h3>
+          <p>ANIRA is tailored to specialized audio neural rendering pipelines. tinyML aims to be more general-purpose for edge inference across domains, while retaining the real-time focus that audio applications demand.</p>
+          <h3>ONNX Runtime</h3>
+          <p>ONNX Runtime is a general-purpose inference engine with broad operator support and hardware backends. tinyML trades breadth for a smaller, more controllable runtime optimized for deterministic latency and constrained memory budgets.</p>
+          <h3>Embedded ML Frameworks</h3>
+          <p>Embedded solutions (e.g., microcontroller-focused runtimes) excel at minimal footprints but often constrain model families. tinyML sits between these extremes: smaller and more predictable than general-purpose stacks, but more capable than microcontroller-only runtimes.</p>
+          <h2>Educational and Functional</h2>
+          <p>tinyML is both a teaching project and a practical runtime. The codebase is structured to make key ideas easy to study while remaining usable for real deployments. You can learn how modern models work under tight constraints and then ship those same implementations on-device.</p>
+        </article>
+        <aside class="toc" id="toc">
+          <div class="toc-title">On this page</div>
+          <nav id="toc-list"></nav>
+        </aside>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/common.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  <script src="wiki.js"></script>
+</body>
+</html>

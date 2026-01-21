@@ -83,26 +83,27 @@ void VectorOps::matrix_vector_multiply(const float* matrix, const float* vector,
     for (size_t i = 0; i < rows; ++i) {
         const float* matrix_row = &matrix[i * cols];
         float sum = 0.0f;
-        
+
         size_t aligned_cols = cols - (cols % batch_size);
-        batch_type sum_batch = batch_type(0.0f);
-        
-        // Process aligned columns with SIMD
+
+        // Process aligned columns with SIMD, reduce per-batch in scalar order
+        // to minimize numeric drift vs. the reference scalar loop.
         for (size_t j = 0; j < aligned_cols; j += batch_size) {
             batch_type matrix_batch = xsimd::load_unaligned(&matrix_row[j]);
             batch_type vector_batch = xsimd::load_unaligned(&vector[j]);
             batch_type prod_batch = matrix_batch * vector_batch;
-            sum_batch += prod_batch;
+            alignas(64) float prod_values[batch_size];
+            prod_batch.store_unaligned(prod_values);
+            for (size_t k = 0; k < batch_size; ++k) {
+                sum += prod_values[k];
+            }
         }
-        
-        // Horizontal sum of the batch
-        sum = xsimd::reduce_add(sum_batch);
-        
+
         // Handle remaining columns
         for (size_t j = aligned_cols; j < cols; ++j) {
             sum += matrix_row[j] * vector[j];
         }
-        
+
         result[i] = sum;
     }
 }

@@ -29,6 +29,15 @@ The original motivation of this repository is to add foundational real-time supp
    make
    ```
 
+## Interactive Playground
+Visualize and interact with models in real-time using the web-based playground.
+
+1. Run the playground script:
+   ```bash
+   ./scripts/run_playground.sh
+   ```
+2. Open your browser at `http://localhost:8080`.
+
 ## Usage
 
 ### Training the Perceptron
@@ -94,4 +103,4 @@ Feel free to submit pull requests, report issues, or suggest improvements. Contr
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the tinyML Proprietary License - see the [LICENSE](LICENSE) file for details.

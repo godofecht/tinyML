@@ -63,6 +63,26 @@ namespace ML
         }
 
         /**
+         * @brief Get the topology of the network.
+         * 
+         * @return std::vector<unsigned> The topology of the network.
+         */
+        std::vector<unsigned> getTopology() const
+        {
+            return topology;
+        }
+
+        /**
+         * @brief Get the weights of the network.
+         * 
+         * @return std::vector<double> The weights of the network.
+         */
+        std::vector<double> getWeights() const
+        {
+            return weights;
+        }
+
+        /**
          * @brief Set a new topology for the model.
          * 
          * This function allows you to change the network structure after initialization.
