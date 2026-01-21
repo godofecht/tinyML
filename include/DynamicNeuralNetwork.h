@@ -95,6 +95,7 @@ public:
         bool enable_pruning = true;
     };
     
+    DynamicNeuralNetwork();
     DynamicNeuralNetwork(const NetworkConfig& config);
     ~DynamicNeuralNetwork() = default;
     
@@ -104,6 +105,7 @@ public:
     
     // Dynamic resizing
     void resize_layer(size_t layer_idx, size_t new_size);
+    void addLayer(size_t size);
     void add_layer(size_t position, size_t size);
     void remove_layer(size_t position);
     
@@ -123,6 +125,7 @@ public:
 private:
     NetworkConfig config_;
     std::vector<std::unique_ptr<DynamicLayer>> layers_;
+    std::vector<size_t> manual_topology_;
     std::vector<float> memory_pool_;
     size_t pool_offset_;
     
@@ -131,6 +134,7 @@ private:
     std::vector<float> recent_errors_;
     
     void initialize_layers();
+    void rebuild_layers_from_manual_topology();
     void compute_layer_efficiencies();
     bool should_grow_layer(size_t layer_idx) const;
     bool should_shrink_layer(size_t layer_idx) const;

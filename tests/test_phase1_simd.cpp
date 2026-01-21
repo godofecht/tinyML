@@ -154,6 +154,9 @@ TEST_F(Phase1SIMDTest, BatchedActivationFunctions) {
 // Test Performance Targets from Roadmap
 TEST_F(Phase1SIMDTest, PerformanceTargetsValidation) {
     std::cout << "\n=== Phase 1 Performance Targets Validation ===\n";
+#ifndef NDEBUG
+    GTEST_SKIP() << "Performance targets require a Release build (-O3).";
+#endif
     std::cout << std::setw(10) << "Operation" << std::setw(12) << "Size" 
               << std::setw(15) << "Time (μs)" << std::setw(12) << "Target (μs)" 
               << std::setw(10) << "Status" << std::endl;
@@ -365,9 +368,4 @@ TEST_F(Phase1SIMDTest, EdgeCasesAndErrorHandling) {
     ASSERT_NEAR(large_result[1], -1e6f + 1.0f, 1e-6f);
     ASSERT_NEAR(large_result[2], 1e-6f + 1.0f, 1e-6f);
     ASSERT_NEAR(large_result[3], -1e-6f + 1.0f, 1e-6f);
-}
-
-int main(int argc, char **argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
 }

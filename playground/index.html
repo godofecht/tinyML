@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>tinyML Playground</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="app-header">
+        <img src="/assets/logo" alt="tinyML logo" class="brand-logo">
+        <h1>Playground</h1>
+    </header>
+    <main>
+        <aside class="sidebar">
+            <div class="sidebar-section">
+                <h2>Models</h2>
+                <ul id="model-list">
+                    <!-- Models will be dynamically populated here -->
+                </ul>
+            </div>
+            
+            <div class="sidebar-section controls-section">
+                <h2 id="current-model-title">Select a Model</h2>
+                <div id="model-description"></div>
+                <div id="input-area"></div>
+                <div class="button-group" style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button id="run-button" style="display:none; flex: 1;">Run Inference</button>
+                    <button id="train-button" style="display:none; flex: 1; background-color: #28a745;">Train Step</button>
+                </div>
+            </div>
+        </aside>
+
+        <section id="playground-area">
+            <div class="dashboard-grid">
+                <!-- Top Row: Network Visualization -->
+                <div class="card network-card">
+                    <h3>Network Architecture</h3>
+                    <div class="canvas-container">
+                        <canvas id="network-canvas"></canvas>
+                    </div>
+                </div>
+
+                <!-- Bottom Row: Output & Charts -->
+                <div class="bottom-panel">
+                    <div class="card output-card">
+                        <div class="card-header">
+                            <h3>Logs & Output</h3>
+                            <span id="status-message" class="status-message">Ready</span>
+                        </div>
+                        <div class="scroll-container">
+                            <pre id="output-content"></pre>
+                        </div>
+                    </div>
+                    
+                    <div class="card chart-card">
+                <h3>Visualization</h3>
+                <div class="chart-container">
+                  <canvas id="output-chart" aria-label="Model output visualization" role="img"></canvas>
+                </div>
+              </div>
+
+              <div class="card benchmark-card">
+                <h3>Performance Benchmark (Latency in µs)</h3>
+                <div class="chart-container">
+                  <canvas id="benchmark-chart" aria-label="Performance benchmark visualization" role="img"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

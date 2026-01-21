@@ -9,6 +9,7 @@
 #include <random>
 #include <vector>
 #include <iostream>
+#include <iomanip>
 #include <thread>
 #include <future>
 
@@ -115,7 +116,7 @@ TEST_F(Phase4TransformerTest, StreamingInterface) {
     std::vector<std::vector<float>> outputs;
     
     for (size_t i = 0; i < 5; ++i) {
-        auto future = std::async(std::launch::async, [&transformer, &test_embedding, i]() {
+        auto future = std::async(std::launch::async, [this, &transformer, i]() {
             transformer.process_token(test_embedding);
         });
         futures.push_back(std::move(future));
@@ -290,11 +291,10 @@ TEST_F(Phase4TransformerTest, FactoryPatterns) {
     ASSERT_NE(server_transformer, nullptr);
     
     // Test each transformer
-    std::vector<std::pair<std::string, std::unique_ptr<ML::RealTime::StreamingTransformer>>> transformers = {
-        {"Edge", std::move(edge_transformer)},
-        {"Mobile", std::move(mobile_transformer)},
-        {"Server", std::move(server_transformer)}
-    };
+    std::vector<std::pair<std::string, std::unique_ptr<ML::RealTime::StreamingTransformer>>> transformers;
+    transformers.emplace_back("Edge", std::move(edge_transformer));
+    transformers.emplace_back("Mobile", std::move(mobile_transformer));
+    transformers.emplace_back("Server", std::move(server_transformer));
     
     for (const auto& [name, transformer] : transformers) {
         auto output = transformer->forward_single(test_embedding);

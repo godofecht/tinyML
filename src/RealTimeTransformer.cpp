@@ -166,11 +166,12 @@ StreamingTransformer::StreamingTransformer(const Config& config)
 }
 
 StreamingTransformer::~StreamingTransformer() {
-    stop_streaming();
+    stop_stream();
 }
 
 void StreamingTransformer::start_stream() {
     streaming_active_ = true;
+    start_time_ = std::chrono::steady_clock::now();
     processing_thread_ = std::thread(&StreamingTransformer::process_stream, this);
 }
 
@@ -314,6 +315,10 @@ bool StreamingTransformer::meets_latency_target() const {
 bool StreamingTransformer::meets_memory_target() const {
     size_t memory_mb = get_memory_usage() / (1024 * 1024);
     return memory_mb <= config_.max_memory_mb;
+}
+
+const StreamingTransformer::Config& StreamingTransformer::get_config() const {
+    return config_;
 }
 
 // RealTimeTransformerFactory Implementation

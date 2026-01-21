@@ -1,0 +1,36 @@
+{
+  "sections": [
+    {
+      "title": "Docs",
+      "items": [
+        { "title": "README", "path": "../../README.md" },
+        { "title": "Roadmap", "path": "../../ROADMAP.md" },
+        { "title": "Production API", "path": "../../docs/PRODUCTION_API.md" }
+      ]
+    },
+    {
+      "title": "Playground",
+      "items": [
+        { "title": "Model Playground", "path": "../../playground/index.html" }
+      ]
+    },
+    {
+      "title": "Blog",
+      "items": [
+        { "title": "Phase 1: SIMD Optimization Foundation", "path": "../../blog/phase-1-simd-optimization-foundation.md" },
+        { "title": "Phase 2: Attention Mechanism Core", "path": "../../blog/phase-2-attention-mechanism-core.md" },
+        { "title": "Phase 3: Dynamic Neural Systems", "path": "../../blog/phase-3-dynamic-neural-systems.md" },
+        { "title": "Phase 4: Real-Time Transformers", "path": "../../blog/phase-4-real-time-transformers.md" },
+        { "title": "Phase 5: Advanced Optimizations", "path": "../../blog/phase-5-advanced-optimizations.md" },
+        { "title": "Phase 6: Production Integration", "path": "../../blog/phase-6-production-integration.md" },
+        { "title": "Phase 7: Advanced Attention (Science)", "path": "../../blog/phase-7-advanced-attention-science.md" },
+        { "title": "Phase 8: Physics-Informed NN", "path": "../../blog/phase-8-physics-informed-neural-networks.md" },
+        { "title": "Phase 9: Bayesian NN (Science)", "path": "../../blog/phase-9-bayesian-neural-networks-science.md" },
+        { "title": "Phase 9: Bayesian NN (Implementation)", "path": "../../blog/phase-9-bayesian-neural-networks-implementation.md" },
+        { "title": "Phase 10: Graph Neural Networks", "path": "../../blog/phase-10-graph-neural-networks-complete.md" },
+        { "title": "Phase 12: Reinforcement Learning", "path": "../../blog/phase-12-reinforcement-learning-complete.md" },
+        { "title": "Phase 13: Time Series Forecasting", "path": "../../blog/phase-13-time-series-forecasting-complete.md" }
+      ]
+    }
+  ]
+}

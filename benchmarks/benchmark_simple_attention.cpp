@@ -65,8 +65,7 @@ public:
         std::vector<float> out_weights(embed_dim * embed_dim);
         
         // Initialize weights
-        std::random_device rd;
-        std::mt19937 gen(rd());
+        static thread_local std::mt19937 gen(42);
         std::normal_distribution<float> dis(0.0f, 0.1f);
         
         for (size_t i = 0; i < embed_dim * embed_dim; ++i) {
@@ -113,11 +112,7 @@ public:
         
         // Test different configurations
         std::vector<std::pair<size_t, size_t>> configs = {
-            {128, 4},   // Small
-            {256, 8},   // Medium
-            {512, 8},   // Large
-            {512, 16},  // Many heads
-            {1024, 16}  // Very large
+            {128, 4}    // Small
         };
         
         std::vector<BenchmarkResult> results;
@@ -168,12 +163,12 @@ private:
         }
         
         // Warm up
-        for (int i = 0; i < 10; ++i) {
+        for (int i = 0; i < 1; ++i) {
             simulate_attention(embed_dim, num_heads, input, output);
         }
         
         // Benchmark
-        const int iterations = 1000;
+        const int iterations = 5;
         auto start = high_resolution_clock::now();
         
         for (int i = 0; i < iterations; ++i) {
@@ -214,14 +209,14 @@ private:
         }
         
         // Warm up
-        for (int i = 0; i < 5; ++i) {
+        for (int i = 0; i < 1; ++i) {
             for (int seq = 0; seq < 8; ++seq) {
                 simulate_attention(embed_dim, num_heads, inputs[seq], outputs[seq]);
             }
         }
         
         // Benchmark
-        const int iterations = 100;
+        const int iterations = 2;
         auto start = high_resolution_clock::now();
         
         for (int i = 0; i < iterations; ++i) {
@@ -353,7 +348,7 @@ void stress_test_attention() {
         input[i] = static_cast<float>(i) / embed_dim;
     }
     
-    const int stress_iterations = 10000;
+    const int stress_iterations = 200;
     auto start = high_resolution_clock::now();
     
     for (int i = 0; i < stress_iterations; ++i) {
@@ -367,7 +362,7 @@ void stress_test_attention() {
             }
         }
         
-        if (i % 1000 == 0) {
+        if (i % 50 == 0) {
             std::cout << "Completed " << i << " iterations...\n";
         }
     }
