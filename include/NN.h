@@ -56,7 +56,8 @@ namespace ML
         static constexpr double alpha = 0.5;  // momentum
 
 	public:
-		std::vector<std::unique_ptr<connection>> getOutputWeights() { return std::move(outputWeights); }
+		const std::vector<std::unique_ptr<connection>>& getOutputWeights() const { return outputWeights; }
+		std::vector<std::unique_ptr<connection>>& getOutputWeights() { return outputWeights; }
 	};
 }
 

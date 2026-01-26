@@ -84,9 +84,14 @@ struct Dataset {
     
     std::unique_ptr<Dataset> train, val, test;
     
-    size_t size() const { return X.size() / input_dim; }
-    size_t input_dim;
-    size_t output_dim;
+    size_t input_dim = 0;
+    size_t output_dim = 0;
+
+    Dataset() = default;
+    Dataset(size_t in_dim, size_t out_dim) : input_dim(in_dim), output_dim(out_dim) {}
+    
+    size_t size() const { return input_dim > 0 ? X.size() / input_dim : 0; }
+
     
     void add_sample(const float* x, float y);
     void add_sample(const float* x, int label);
@@ -393,6 +398,20 @@ public:
         for (auto& layer : layers) {
             layer->perturb_weights(noise_std);
         }
+    }
+
+    // Get activations for visualization
+    std::vector<std::vector<float>> get_activations(const float* input) {
+        std::vector<std::vector<float>> activations;
+        std::vector<float> current_input(input, input + input_dim);
+        
+        for (auto& layer : layers) {
+            std::vector<float> output(layer->get_output_size());
+            layer->forward(current_input.data(), output.data(), false); // false = inference mode
+            activations.push_back(output);
+            current_input = output;
+        }
+        return activations;
     }
 
     // Utility

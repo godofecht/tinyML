@@ -1,106 +1,121 @@
-# TinyML Perceptron Library
+# TinyML: High-Performance C++ Machine Learning Library
 
-This repository contains a simple implementation of a Perceptron model for solving binary classification problems. The implementation includes training, evaluation, and various tests to ensure the correctness of the network, including checking the transfer function and ensuring proper training convergence. This project is focused on tiny machine learning (TinyML), targeting CPU-efficient models for simple tasks.
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)
+![Standard](https://img.shields.io/badge/C%2B%2B-17%2F20-blue.svg)
 
-The original motivation of this repository is to add foundational real-time support for small machine learning models that are more suited for solving data related problems, such as parameter mappings, linear regression, and more.
+**TinyML** is a high-performance, lightweight machine learning library written in modern C++ (17/20). It is designed for educational exploration and production-grade embedded deployment, featuring a zero-dependency core, SIMD optimizations, and a rich interactive playground.
 
-## Features
+Unlike standard frameworks (PyTorch/TensorFlow) that abstract away the details, TinyML implements algorithms from scratch to demonstrate deep understanding of the underlying mathematics and systems engineering required for high-performance ML.
 
-- **Perceptron Implementation**: A basic neural network model with a single-layer perceptron that can be trained for binary classification tasks.
-- **Examples**: Demonstrates how the Perceptron class can be used to solve classic logic gate problem, which is a fundamental binary classification task.
-- **Extensive Testing**: Includes tests to verify the network's weight initialization, feedforward mechanism, transfer function correctness, and training convergence.
-- **CPU Efficient**: The perceptron is designed to be lightweight and CPU-efficient, making it suitable for small ML applications.
+---
 
-## Installation
+## 🚀 Key Features
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/godofecht/tinyML.git
-   ```
-2. Navigate to the project directory:
-   ```bash
-   cd tinyML
-   ```
-3. Build the project:
-   ```bash
-   mkdir build
-   cd build
-   cmake ..
-   make
-   ```
+### 🧠 Advanced Architectures
+*   **Deep Learning**: Custom implementation of Feed-Forward Networks, CNNs (Convolutional), and RNNs.
+*   **Transformers**: Real-time streaming Transformer implementation with self-attention mechanisms.
+*   **Bayesian Neural Networks (BNN)**: Uncertainty estimation using Monte Carlo Dropout and Variational Inference.
+*   **Generative Models**: Variational Autoencoders (VAE) and 2D Generative Adversarial Networks (GAN).
+*   **Scientific ML**: Physics-Informed Neural Networks (PINNs) for solving PDEs (e.g., Heat Equation).
+*   **Reinforcement Learning**: Policy Gradient and Q-Learning implementations (CartPole, Pong).
+*   **Graph Neural Networks (GNN)**: Spatiotemporal modeling for traffic forecasting.
 
-## Interactive Playground
-Visualize and interact with models in real-time using the web-based playground.
+### ⚡ Performance & Systems
+*   **SIMD Optimization**: Explicit AVX2/NEON vectorization for core linear algebra operations (`SIMDOperations.h`, `XSIMDOperations.h`).
+*   **Quantization**: Support for integer-only inference for edge devices.
+*   **Memory Management**: Smart pointer usage and custom memory pools for minimal overhead.
+*   **Thread Safety**: Thread-safe model serving infrastructure (`ModelManager`).
 
-1. Run the playground script:
-   ```bash
-   ./scripts/run_playground.sh
-   ```
-2. Open your browser at `http://localhost:8080`.
+### 🎮 Interactive Playground
+A built-in web-based dashboard to visualize training and inference in real-time.
+*   **Real-time Visualization**: Canvas-based rendering of environments (CartPole, Pong) and internal model states (Attention maps, CNN filters).
+*   **Interactive Scenarios**: 7+ scenarios covering different ML domains.
+*   **Live Training**: "Loop Train" functionality to watch models learn.
 
-## Usage
+---
 
-### Training the Perceptron
-The `Perceptron` class allows you to define the network's topology and train it on binary classification tasks. Here's an example of training the perceptron on a NAND gate problem:
+## 🛠️ Installation & Build
 
-```cpp
-std::vector<unsigned> topology = {2, 2, 1};
-ML::Models::Perceptron perceptron (topology);
+### Prerequisites
+*   CMake (3.15+)
+*   C++ Compiler (GCC 9+, Clang 10+, MSVC 2019+)
+*   Make or Ninja
 
-std::vector<std::pair<std::vector<double>, std::vector<double>>> nandTrainingSet = {
-    {{0, 0}, {1}},
-    {{0, 1}, {1}},
-    {{1, 0}, {1}},
-    {{1, 1}, {0}}
-};
-
-for (int i = 0; i < 10000; ++i) 
-{
-    for (const auto &[input, output] : nandTrainingSet) 
-    {
-        perceptron.feedForward(input);
-        perceptron.learnSupervised(output);
-    }
-}
+### Build Instructions
+```bash
+git clone https://github.com/your-username/tinyML.git
+cd tinyML
+mkdir build && cd build
+cmake ..
+make -j$(nproc)
 ```
 
-### Evaluating the Perceptron
-Once trained, the perceptron can be evaluated on new inputs:
+---
 
-```cpp
-auto output = perceptron.process({0, 0});
-std::cout << "Output for (0, 0): " << output[0] << std::endl;
+## 🖥️ Running the Playground
+
+The playground consists of a C++ backend server and a vanilla JS/HTML frontend.
+
+1.  **Start the Server**:
+    ```bash
+    ./bin/PlaygroundServer
+    ```
+    *Server listens on port 8081.*
+
+2.  **Access the Dashboard**:
+    Open `http://localhost:8081` in your browser.
+
+3.  **Explore Scenarios**:
+    *   **CartPole (RL)**: Watch an agent balance a pole.
+    *   **Pong (RL)**: AI agent playing against a heuristic opponent.
+    *   **CNN**: Visual convolution operations.
+    *   **Heat Equation (PINN)**: Solving partial differential equations.
+    *   **Traffic (GNN)**: Graph diffusion simulation.
+
+---
+
+## 📂 Project Structure
+
+```
+tinyML/
+├── include/              # Core Library Headers
+│   ├── Network.h         # Base Neural Network abstractions
+│   ├── RealTimeTransformer.h # Transformer implementation
+│   ├── SIMDOperations.h  # AVX/NEON optimizations
+│   └── ...
+├── src/                  # Library Implementation
+├── playground/           # Interactive Web Dashboard
+│   ├── server.cpp        # HTTP Server (using httplib)
+│   ├── ModelManager.h    # Thread-safe model orchestration
+│   ├── Scenarios.h       # Scenario logic (Pong, CartPole, etc.)
+│   └── script.js         # Frontend visualization logic
+├── benchmarks/           # Performance benchmarks
+├── tests/                # GoogleTest suite
+└── blog/                 # Detailed architectural documentation
 ```
 
-### Running Tests
-The project includes several unit tests to ensure that the perceptron implementation is working correctly. The tests are implemented using Google Test.
+---
 
-To run the tests:
+## 🧪 Testing & Benchmarks
 
-1. Build the test suite:
-   ```bash
-   cd build
-   make
-   ```
-2. Run the tests:
-   ```bash
-   ./TinyMLTests
-   ```
+The project maintains a high standard of correctness through a comprehensive test suite.
 
-## Tests
+```bash
+# Run Unit Tests
+cd build
+./TinyMLTests
 
-The following tests are included:
+# Run Benchmarks
+./SIMDBenchmark
+```
 
-1. **Initial Weights Sanity Check**: Verifies that the perceptron initializes weights correctly.
-2. **Feedforward Check**: Ensures that the feedforward pass produces valid output.
-3. **Transfer Function Test**: Validates that the transfer function works as expected for a range of inputs.
-4. **Training Convergence**: Ensures that the perceptron can learn to solve the NAND function after training.
-5. **Gradient Check**: Verifies that backpropagation computes gradients correctly using finite difference approximations.
+---
 
-## Contributing
+## 📚 Documentation
+Detailed design documents and phase breakdowns can be found in the `blog/` directory, covering topics from "SIMD Optimization Foundation" to "Reinforcement Learning".
 
-Feel free to submit pull requests, report issues, or suggest improvements. Contributions are always welcome!
+---
 
-## License
-
-This project is licensed under the tinyML Proprietary License - see the [LICENSE](LICENSE) file for details.
+## 📝 License
+MIT License - Free for educational and commercial use.

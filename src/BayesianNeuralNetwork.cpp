@@ -189,5 +189,141 @@ std::unique_ptr<BayesianNeuralNetwork> BayesianNetworkFactory::create_mlp(
     return std::make_unique<BayesianNeuralNetwork>(layer_sizes, config);
 }
 
+// ==================== Dataset Implementation ====================
+void Dataset::add_sample(const float* x, float y_scalar) {
+    X.insert(X.end(), x, x + input_dim);
+    y.push_back(y_scalar);
+}
+
+void Dataset::add_sample(const float* x, int label) {
+    X.insert(X.end(), x, x + input_dim);
+    y.push_back(static_cast<float>(label));
+    labels.push_back(label);
+}
+
+// ==================== BayesianLinear Backprop & Update ====================
+
+void BayesianLinear::backward(const float* input, const float* grad_output, float* grad_input) {
+    for (size_t i = 0; i < output_size; ++i) {
+        float go = grad_output[i];
+        
+        // Bias gradients
+        grad_bias_mean[i] += go;
+        // Bias logvar gradient: dL/dlogvar = dL/dy * dy/dlogvar = go * (sampled - mean) * 0.5
+        grad_bias_logvar[i] += go * (sampled_bias[i] - bias_mean[i]) * 0.5f;
+        
+        for (size_t j = 0; j < input_size; ++j) {
+            float in = input[j];
+            // Weight gradients
+            grad_weight_mean[i * input_size + j] += go * in;
+            
+            // Weight logvar gradient
+            size_t idx = i * input_size + j;
+            grad_weight_logvar[idx] += go * in * (sampled_weights[idx] - weight_mean[idx]) * 0.5f;
+            
+            // Input gradients (for previous layer)
+            if (grad_input) {
+                // Use sampled_weights used in forward pass
+                grad_input[j] += go * sampled_weights[i * input_size + j]; 
+            }
+        }
+    }
+}
+
+void BayesianLinear::update_parameters(float learning_rate) {
+    for (size_t i = 0; i < weight_mean.size(); ++i) {
+        weight_mean[i] -= learning_rate * grad_weight_mean[i];
+        grad_weight_mean[i] = 0.0f; // Reset
+        
+        weight_logvar[i] -= learning_rate * grad_weight_logvar[i];
+        grad_weight_logvar[i] = 0.0f;
+    }
+    for (size_t i = 0; i < bias_mean.size(); ++i) {
+        bias_mean[i] -= learning_rate * grad_bias_mean[i];
+        grad_bias_mean[i] = 0.0f; // Reset
+        
+        bias_logvar[i] -= learning_rate * grad_bias_logvar[i];
+        grad_bias_logvar[i] = 0.0f;
+    }
+}
+
+// ==================== BayesianNeuralNetwork Training Methods ====================
+
+float BayesianNeuralNetwork::compute_loss(const Dataset& data) {
+    float total_loss = 0.0f;
+    size_t n_samples = data.size();
+    if (n_samples == 0) return 0.0f;
+    
+    std::vector<float> input_vec(input_dim);
+    float output;
+    
+    for (size_t i = 0; i < n_samples; ++i) {
+        for (size_t j = 0; j < input_dim; ++j) {
+            input_vec[j] = data.X[i * input_dim + j];
+        }
+        forward(input_vec.data(), &output, false);
+        float diff = output - data.y[i];
+        total_loss += diff * diff;
+    }
+    return total_loss / n_samples;
+}
+
+void BayesianNeuralNetwork::train_epoch(const Dataset& data) {
+    float learning_rate = 0.01f;
+    size_t n_samples = data.size();
+    if (n_samples == 0) return;
+    
+    std::vector<float> input_vec(input_dim);
+    std::vector<std::vector<float>> layer_inputs; // Store inputs for backward pass
+    
+    for (size_t i = 0; i < n_samples; ++i) {
+        // Prepare input
+        for (size_t j = 0; j < input_dim; ++j) {
+            input_vec[j] = data.X[i * input_dim + j];
+        }
+        
+        // Forward pass (store intermediates)
+        layer_inputs.clear();
+        layer_inputs.push_back(input_vec);
+        
+        std::vector<float> current = input_vec;
+        for (const auto& layer : layers) {
+            std::vector<float> next(layer->get_output_size());
+            layer->forward(current.data(), next.data(), true);
+            layer_inputs.push_back(next); // Input to next layer (which is output of current)
+            current = next;
+        }
+        
+        // Adjust layer_inputs: 
+        // layer_inputs[0] is input to layers[0]
+        // layer_inputs[1] is output of layers[0] == input to layers[1]
+        // ...
+        
+        float prediction = current[0]; // Assuming single output
+        float target = data.y[i];
+        
+        // Backward pass
+        float loss_grad = 2.0f * (prediction - target); // MSE gradient
+        
+        std::vector<float> grad_output = {loss_grad};
+        std::vector<float> grad_input;
+        
+        for (int l = layers.size() - 1; l >= 0; --l) {
+            size_t in_size = layers[l]->get_input_size();
+            grad_input.assign(in_size, 0.0f);
+            
+            // Input to this layer is stored in layer_inputs[l]
+            layers[l]->backward(layer_inputs[l].data(), grad_output.data(), grad_input.data());
+            
+            grad_output = grad_input;
+        }
+        
+        // Update weights (SGD)
+        for (const auto& layer : layers) {
+            layer->update_parameters(learning_rate);
+        }
+    }
+}
+
 } // namespace Bayesian
 } // namespace ML

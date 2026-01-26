@@ -16,6 +16,8 @@
 #include <condition_variable>
 #include <atomic>
 #include <chrono>
+#include <random>
+#include <deque>
 
 namespace ML {
 namespace RealTime {
@@ -72,6 +74,15 @@ public:
 
     // Configuration
     const Config& get_config() const;
+    
+    // Training/Updates
+    void perturb_weights(float noise_std = 0.01f, unsigned int seed = 0, float direction = 1.0f);
+    float train_step(const std::vector<float>& input, const std::vector<float>& target);
+    std::vector<float> get_weights() const;
+    std::vector<std::vector<float>> get_weights_structured() const;
+    
+    // Visualization
+    std::vector<std::vector<float>> get_activations(const std::vector<float>& input);
 
 private:
     Config config_;
@@ -285,16 +296,16 @@ namespace TinyML {
 class RealTimeTransformer {
 public:
     RealTimeTransformer(size_t embed_dim, size_t num_heads, size_t num_layers)
-        : transformer_(ML::RealTime::StreamingTransformer::Config{
-              1000,
-              embed_dim,
-              num_heads,
-              num_layers,
-              embed_dim * 4,
-              0.1f,
-              512,
-              1.0f,
-              5}) {}
+                : transformer_(ML::RealTime::StreamingTransformer::Config{
+                      1000,
+                      embed_dim,
+                      num_heads,
+                      num_layers,
+                      embed_dim * 4,
+                      0.0f,
+                      512,
+                      1.0f,
+                      5}) {}
 
     std::vector<float> forward(const std::vector<float>& input) {
         return transformer_.forward_single(input);
@@ -323,6 +334,57 @@ public:
 
     void optimize_for_memory() {
         transformer_.optimize_for_memory();
+    }
+    
+    std::vector<std::vector<float>> get_activations(const std::vector<float>& input) {
+        return transformer_.get_activations(input);
+    }
+
+    std::vector<float> get_weights() const {
+        return transformer_.get_weights();
+    }
+
+    std::vector<std::vector<float>> get_weights_structured() const {
+        return transformer_.get_weights_structured();
+    }
+
+    float train_step(const std::vector<float>& input, const std::vector<float>& target, float noise_std = 0.001f) {
+        // Simple Hill Climbing (1+1 ES) for training
+        auto get_loss = [&]() {
+            auto out = transformer_.forward_single(input);
+            float loss = 0.0f;
+            for (size_t i = 0; i < out.size() && i < target.size(); ++i) {
+                float diff = out[i] - target[i];
+                loss += diff * diff;
+            }
+            return loss;
+        };
+        
+        float current_loss = get_loss();
+        
+        std::random_device rd;
+        unsigned int seed = rd();
+        
+        // Try positive direction
+        transformer_.perturb_weights(noise_std, seed, 1.0f);
+        float loss_pos = get_loss();
+        
+        if (loss_pos < current_loss) {
+            return loss_pos;
+        }
+        
+        // Try negative direction (from +1 to -1 is -2 step)
+        transformer_.perturb_weights(noise_std, seed, -2.0f);
+        float loss_neg = get_loss();
+        
+        if (loss_neg < current_loss) {
+            return loss_neg;
+        }
+        
+        // Revert (from -1 to 0 is +1 step)
+        transformer_.perturb_weights(noise_std, seed, 1.0f);
+        
+        return current_loss;
     }
 
 private:

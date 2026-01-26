@@ -11,6 +11,8 @@
 #include <memory>
 #include <unordered_map>
 #include <functional>
+#include <string>
+#include <random>
 #include "XSIMDOperations.h"
 
 namespace ML {
@@ -34,6 +36,22 @@ public:
     virtual std::vector<float> forward(const std::vector<float>& input) = 0;
     virtual void resize(size_t new_input_size, size_t new_output_size);
     virtual size_t get_memory_usage() const;
+    virtual void perturb_weights(float sigma, unsigned int seed, float direction = 1.0f) {
+        std::mt19937 gen(seed);
+        std::normal_distribution<float> dist(0.0f, sigma);
+        for (auto& w : weights_) w += direction * dist(gen);
+        for (auto& b : biases_) b += direction * dist(gen);
+    }
+
+    virtual std::vector<float> get_weights() const {
+        std::vector<float> all_params = weights_;
+        all_params.insert(all_params.end(), biases_.begin(), biases_.end());
+        return all_params;
+    }
+
+    virtual std::vector<float> get_weights_structured() const {
+        return weights_;
+    }
     
     // Configuration
     size_t get_input_size() const { return config_.input_size; }
