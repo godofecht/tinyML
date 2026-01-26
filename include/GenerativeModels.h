@@ -124,6 +124,10 @@ public:
     // Accessors for visualization
     const Tensor& get_encoder_w1() const { return encoder_w1_; }
     const Tensor& get_decoder_w1() const { return decoder_w1_; }
+    
+    // Get intermediate activations for visualization
+    std::vector<Tensor> get_activations(const Tensor& input);
+    std::vector<Tensor> get_decoder_activations(const LatentVector& latent);
 
 private:
     Config config_;

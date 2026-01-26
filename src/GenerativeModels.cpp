@@ -340,6 +340,102 @@ void VAE::decode(const LatentVector& latent, Tensor& output) {
     decoder_forward(latent, {}, hidden, output);
 }
 
+std::vector<Tensor> VAE::get_activations(const Tensor& input) {
+    std::vector<Tensor> activations;
+    
+    // 1. Encoder Hidden Layer
+    Tensor hidden;
+    hidden.resize(config_.hidden_dim);
+    for (size_t i = 0; i < config_.hidden_dim; ++i) {
+        float sum = encoder_b1_[i];
+        for (size_t j = 0; j < config_.input_dim; ++j) {
+            if (j < input.size()) // Safety check
+                sum += input[j] * encoder_w1_[j * config_.hidden_dim + i];
+        }
+        hidden[i] = std::tanh(sum);
+    }
+    activations.push_back(hidden);
+    
+    // 2. Mu and LogVar (Latent Parameters)
+    Tensor mu(config_.latent_dim), logvar(config_.latent_dim);
+    for (size_t i = 0; i < config_.latent_dim; ++i) {
+        float mu_sum = encoder_mu_b_[i];
+        float logvar_sum = encoder_logvar_b_[i];
+        for (size_t j = 0; j < config_.hidden_dim; ++j) {
+            mu_sum += hidden[j] * encoder_mu_w_[j * config_.latent_dim + i];
+            logvar_sum += hidden[j] * encoder_logvar_w_[j * config_.latent_dim + i];
+        }
+        mu[i] = mu_sum;
+        logvar[i] = logvar_sum;
+    }
+    activations.push_back(mu); // Only pushing Mu for visualization simplicity
+    // activations.push_back(logvar); 
+    
+    // 3. Latent Vector (Sampled)
+    Tensor latent;
+    Sampler::reparameterize(mu, logvar, latent);
+    activations.push_back(latent);
+    
+    // 4. Decoder Hidden Layer
+    Tensor dec_hidden;
+    dec_hidden.resize(config_.hidden_dim);
+    for (size_t i = 0; i < config_.hidden_dim; ++i) {
+        float sum = decoder_b1_[i];
+        for (size_t j = 0; j < config_.latent_dim; ++j) {
+            sum += latent[j] * decoder_w1_[j * config_.hidden_dim + i];
+        }
+        dec_hidden[i] = std::tanh(sum);
+    }
+    activations.push_back(dec_hidden);
+    
+    // 5. Output Layer
+    Tensor output;
+    output.resize(config_.input_dim);
+    for (size_t i = 0; i < config_.input_dim; ++i) {
+        float sum = decoder_b2_[i];
+        for (size_t j = 0; j < config_.hidden_dim; ++j) {
+            sum += dec_hidden[j] * decoder_w2_[j * config_.hidden_dim + i];
+        }
+        output[i] = std::tanh(sum);
+    }
+    activations.push_back(output);
+    
+    return activations;
+}
+
+std::vector<Tensor> VAE::get_decoder_activations(const LatentVector& latent) {
+    std::vector<Tensor> activations;
+    
+    // 1. Latent Vector
+    activations.push_back(latent);
+    
+    // 2. Decoder Hidden Layer
+    Tensor dec_hidden;
+    dec_hidden.resize(config_.hidden_dim);
+    for (size_t i = 0; i < config_.hidden_dim; ++i) {
+        float sum = decoder_b1_[i];
+        for (size_t j = 0; j < config_.latent_dim; ++j) {
+            sum += latent[j] * decoder_w1_[j * config_.hidden_dim + i];
+        }
+        dec_hidden[i] = std::tanh(sum);
+    }
+    activations.push_back(dec_hidden);
+    
+    // 3. Output Layer
+    Tensor output;
+    output.resize(config_.input_dim);
+    for (size_t i = 0; i < config_.input_dim; ++i) {
+        float sum = decoder_b2_[i];
+        for (size_t j = 0; j < config_.hidden_dim; ++j) {
+            sum += dec_hidden[j] * decoder_w2_[j * config_.hidden_dim + i];
+        }
+        output[i] = std::tanh(sum);
+    }
+    activations.push_back(output);
+    
+    return activations;
+}
+
 void VAE::forward(const Tensor& input, Tensor& output, Tensor& mu, Tensor& logvar) {
     Tensor hidden;
     encoder_forward(input, {}, hidden, mu, logvar);

@@ -83,6 +83,36 @@ namespace ML
         }
 
         /**
+         * @brief Get the current activations (output values) of all neurons in the network.
+         * 
+         * @return std::vector<std::vector<double>> A vector of vectors containing activations for each layer.
+         */
+        std::vector<std::vector<double>> getActivations() const
+        {
+            std::vector<std::vector<double>> activations;
+            for (const auto& layer : thisNetwork.layers)
+            {
+                std::vector<double> layerActivations;
+                for (const auto& neuron : layer)
+                {
+                    layerActivations.push_back(neuron->getOutputVal());
+                }
+                activations.push_back(layerActivations);
+            }
+            return activations;
+        }
+
+        /**
+         * @brief Get the recent average error (loss) of the network.
+         * 
+         * @return double The recent average error.
+         */
+        double getRecentAverageError() const
+        {
+            return thisNetwork.getRecentAverageError();
+        }
+
+        /**
          * @brief Set a new topology for the model.
          * 
          * This function allows you to change the network structure after initialization.

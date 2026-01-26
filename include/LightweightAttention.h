@@ -11,6 +11,7 @@
 #include <vector>
 #include <memory>
 #include <cmath>
+#include <random>
 #include "XSIMDOperations.h"
 
 namespace ML {
@@ -55,6 +56,30 @@ public:
     // Configuration access
     const Config& get_config() const { return config_; }
     size_t get_output_dim() const { return config_.embed_dim; }
+
+    void perturb_weights(float sigma, unsigned int seed, float direction = 1.0f) {
+        std::mt19937 gen(seed);
+        std::normal_distribution<float> dist(0.0f, sigma);
+        
+        for (auto& w : q_weights_) w += direction * dist(gen);
+        for (auto& w : k_weights_) w += direction * dist(gen);
+        for (auto& w : v_weights_) w += direction * dist(gen);
+        for (auto& w : out_weights_) w += direction * dist(gen);
+        
+        for (auto& b : q_bias_) b += direction * dist(gen);
+        for (auto& b : k_bias_) b += direction * dist(gen);
+        for (auto& b : v_bias_) b += direction * dist(gen);
+        for (auto& b : out_bias_) b += direction * dist(gen);
+    }
+
+    std::vector<float> get_weights() const {
+        std::vector<float> all_weights;
+        all_weights.insert(all_weights.end(), q_weights_.begin(), q_weights_.end());
+        all_weights.insert(all_weights.end(), k_weights_.begin(), k_weights_.end());
+        all_weights.insert(all_weights.end(), v_weights_.begin(), v_weights_.end());
+        all_weights.insert(all_weights.end(), out_weights_.begin(), out_weights_.end());
+        return all_weights;
+    }
 
 private:
     Config config_;

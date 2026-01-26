@@ -80,6 +80,31 @@ public:
         return output;
     }
     
+    std::vector<std::vector<float>> get_activations(const std::vector<float>& input) {
+        std::vector<std::vector<float>> activations;
+        
+        // Pre-norm: LayerNorm -> Attention
+        std::vector<float> normed_input = layer_norm(input, norm1_weight_, norm1_bias_);
+        std::vector<float> attn_output = attention_->forward(normed_input);
+        activations.push_back(attn_output);
+        
+        // Residual connection
+        std::vector<float> hidden1 = input;
+        for (size_t i = 0; i < d_model_; ++i) {
+            hidden1[i] += attn_output[i];
+        }
+        
+        // Pre-norm: LayerNorm -> FeedForward
+        std::vector<float> normed_hidden = layer_norm(hidden1, norm2_weight_, norm2_bias_);
+        std::vector<float> ff1_out = ff1_->forward(normed_hidden);
+        activations.push_back(ff1_out);
+        
+        std::vector<float> ff2_out = ff2_->forward(ff1_out);
+        activations.push_back(ff2_out);
+        
+        return activations;
+    }
+
     size_t get_memory_usage() const {
         size_t total = 0;
         total += attention_->get_memory_usage();
@@ -89,7 +114,60 @@ public:
                  norm2_weight_.size() + norm2_bias_.size()) * sizeof(float);
         return total;
     }
+
+    void perturb_weights(float sigma, unsigned int seed, float direction = 1.0f) {
+        ff1_->perturb_weights(sigma, seed, direction);
+        ff2_->perturb_weights(sigma, seed, direction);
+        
+        std::mt19937 gen(seed);
+        std::normal_distribution<float> dist(0.0f, sigma);
+        
+        for (auto& w : norm1_weight_) w += direction * dist(gen);
+        for (auto& b : norm1_bias_) b += direction * dist(gen);
+        for (auto& w : norm2_weight_) w += direction * dist(gen);
+        for (auto& b : norm2_bias_) b += direction * dist(gen);
+        
+        attention_->perturb_weights(sigma, seed, direction);
+    }
+
+    std::vector<float> get_weights() const {
+        std::vector<float> all_weights;
+        
+        // Attention weights
+        auto attn_weights = attention_->get_weights();
+        all_weights.insert(all_weights.end(), attn_weights.begin(), attn_weights.end());
+        
+        // FF weights
+        auto ff1_weights = ff1_->get_weights();
+        all_weights.insert(all_weights.end(), ff1_weights.begin(), ff1_weights.end());
+        
+        auto ff2_weights = ff2_->get_weights();
+        all_weights.insert(all_weights.end(), ff2_weights.begin(), ff2_weights.end());
+        
+        // Norm weights
+        all_weights.insert(all_weights.end(), norm1_weight_.begin(), norm1_weight_.end());
+        all_weights.insert(all_weights.end(), norm1_bias_.begin(), norm1_bias_.end());
+        all_weights.insert(all_weights.end(), norm2_weight_.begin(), norm2_weight_.end());
+        all_weights.insert(all_weights.end(), norm2_bias_.begin(), norm2_bias_.end());
+        
+        return all_weights;
+    }
     
+    std::vector<std::vector<float>> get_weights_structured() const {
+        std::vector<std::vector<float>> structured_weights;
+        
+        // Attention weights
+        structured_weights.push_back(attention_->get_weights());
+        
+        // FF1 weights
+        structured_weights.push_back(ff1_->get_weights());
+        
+        // FF2 weights
+        structured_weights.push_back(ff2_->get_weights());
+        
+        return structured_weights;
+    }
+
 private:
     size_t d_model_, n_heads_, d_ff_;
     float dropout_;
@@ -201,6 +279,208 @@ std::vector<float> StreamingTransformer::get_next_output() {
     return {};
 }
 
+std::vector<std::vector<float>> StreamingTransformer::get_activations(const std::vector<float>& input) {
+    std::vector<std::vector<float>> all_activations;
+    
+    // Initial embedding (input + pos)
+    std::vector<float> hidden = input;
+    // Add pos embedding
+    for (size_t i = 0; i < config_.d_model; ++i) {
+        if (i < hidden.size()) hidden[i] += position_embeddings_[i];
+    }
+    all_activations.push_back(hidden);
+    
+    // Process through transformer blocks
+    for (const auto& block : blocks_) {
+        // Get activations from block
+        auto block_acts = block->get_activations(hidden);
+        all_activations.insert(all_activations.end(), block_acts.begin(), block_acts.end());
+        
+        // Update hidden for next block
+        hidden = block->forward(hidden);
+    }
+    
+    all_activations.push_back(hidden); // Final output
+    return all_activations;
+}
+
+void StreamingTransformer::perturb_weights(float noise_std, unsigned int seed, float direction) {
+    // Simple random perturbation to simulate training updates
+    std::mt19937 gen(seed);
+    std::normal_distribution<float> dist(0.0f, noise_std);
+
+    for (auto& w : embedding_weights_) {
+        w += direction * dist(gen);
+    }
+    
+    // Perturb block weights
+    for (auto& block : blocks_) {
+        block->perturb_weights(noise_std, seed, direction);
+    }
+}
+
+std::vector<float> StreamingTransformer::get_weights() const {
+    std::vector<float> all_weights;
+    
+    // Embeddings
+    all_weights.insert(all_weights.end(), embedding_weights_.begin(), embedding_weights_.end());
+    
+    // Blocks
+    for (const auto& block : blocks_) {
+        auto block_weights = block->get_weights();
+        all_weights.insert(all_weights.end(), block_weights.begin(), block_weights.end());
+    }
+    
+    return all_weights;
+}
+
+std::vector<std::vector<float>> StreamingTransformer::get_weights_structured() const {
+        std::vector<std::vector<float>> structured_weights;
+        
+        for (size_t i = 0; i < blocks_.size(); ++i) {
+            auto block_weights = blocks_[i]->get_weights_structured();
+            structured_weights.insert(structured_weights.end(), block_weights.begin(), block_weights.end());
+            
+            // Add empty weights for the connection between blocks (residual/identity)
+            // This ensures alignment with get_activations which has an intermediate state between blocks
+            if (i < blocks_.size() - 1) {
+                structured_weights.push_back({});
+            }
+        }
+        
+        // Note: The final connection from Last Block FF2 -> Output is also implicit/residual
+        // get_activations returns [..., FF2_out, Final_Output]
+        // The loop above handles layers within blocks.
+        // We need one last empty weight set for the final connection if we want to match connection count.
+        // Connections = 3*N + 1.
+        // Current size = 3*N + (N-1) = 4N - 1.
+        // Wait.
+        // N=1: Activations=5 (In, Attn, FF1, FF2, Out). Connections=4.
+        // We added: Attn, FF1, FF2. Size=3.
+        // Conn 0: In->Attn (W0)
+        // Conn 1: Attn->FF1 (W1)
+        // Conn 2: FF1->FF2 (W2)
+        // Conn 3: FF2->Out (No W).
+        // So we need one more empty vector at the end?
+        
+        // N=2: Activations=8 (In, A1, F1, F2, In2, A2, F1, F2, Out). Connections=7.
+        // We added: A1, F1, F2, {}, A2, F1, F2. Size=7.
+        // Conn 0: In->A1 (W0)
+        // ...
+        // Conn 2: F1->F2 (W2)
+        // Conn 3: F2->In2 (W3 - empty) -> Grey. Correct.
+        // Conn 4: In2->A2 (W4)
+        // ...
+        // Conn 6: F2->Out (No W).
+        // But our vector has 7 elements.
+        // Indices 0..6.
+        // Conn 6 uses weights[6] which is F2 weights?
+        // Wait.
+        // blocks_[i]->get_weights_structured() returns [Attn, FF1, FF2].
+        // So weights[6] is FF2 weights of block 2.
+        // Conn 6 is F2 -> Out.
+        // Is Conn 6 represented by FF2 weights?
+        // No, FF2 weights are used to compute F2 output from F1 output.
+        // That is Conn 5 (F1 -> F2).
+        
+        // Let's re-trace N=1.
+        // Acts: In, A, F1, F2, Out.
+        // Conn 0: In -> A. Uses Attn weights. Correct.
+        // Conn 1: A -> F1. Uses FF1 weights. Correct.
+        // Conn 2: F1 -> F2. Uses FF2 weights. Correct.
+        // Conn 3: F2 -> Out. Residual. Should be empty.
+        
+        // So for N=1, we need [A, F1, F2, {}]. Size 4.
+        
+        // N=2.
+        // Acts: In, A1, F1, F2, In2, A2, F1, F2, Out.
+        // Conn 0: In->A1 (A1)
+        // Conn 1: A1->F1 (F1)
+        // Conn 2: F1->F2 (F2)
+        // Conn 3: F2->In2 ({})
+        // Conn 4: In2->A2 (A2)
+        // Conn 5: A2->F1 (F1)
+        // Conn 6: F1->F2 (F2)
+        // Conn 7: F2->Out ({}).
+        
+        // Total connections = 8?
+        // Acts size = 9. 9 nodes -> 8 intervals.
+        // My previous count: 3N + 2 acts. N=2 -> 8 acts. 7 intervals.
+        // Acts: In, A1, F1, F2, A2, F1, F2, Out.
+        // Wait, get_activations logic:
+        // push(In)
+        // Loop N:
+        //   push(A)
+        //   push(F1)
+        //   push(F2)
+        //   hidden = forward(hidden) // Updates hidden for next iter
+        // push(hidden) // Final Out
+        
+        // Loop 1 (Block 1):
+        //   push(A1)
+        //   push(F1_1)
+        //   push(F2_1)
+        //   hidden becomes Block1_Out (which is In2)
+        // Loop 2 (Block 2):
+        //   push(A2)
+        //   push(F1_2)
+        //   push(F2_2)
+        //   hidden becomes Block2_Out
+        // push(Block2_Out)
+        
+        // Total: 1 + 3 + 3 + 1 = 8.
+        // Connections: 7.
+        // 0: In->A1 (A1 weights)
+        // 1: A1->F1 (F1 weights)
+        // 2: F1->F2 (F2 weights)
+        // 3: F2->A2. (Transition Block1->Block2).
+        //    Wait. F2 is the last activation pushed in Block1 loop.
+        //    A2 is the first activation pushed in Block2 loop.
+        //    Is there an intermediate "In2" activation?
+        //    No. `hidden` is updated but not pushed as a separate "Input to Block 2" node.
+        //    The next pushed node is `block->get_activations` -> `attn_output`.
+        //    So Conn 3 connects F2_1 -> A2.
+        
+        //    Is F2_1 -> A2 a direct connection with weights?
+        //    F2_1 is output of FF2 in Block 1.
+        //    Block 1 Output = Input + F2_1 (Residual).
+        //    Block 2 Input = Block 1 Output.
+        //    Block 2 Attn = Attention(Block 2 Input).
+        //    So F2_1 contributes to Block 2 Input, which goes into Attn.
+        //    There is no single weight matrix between F2_1 and A2.
+        //    Also, the "Input" to A2 is (In + A1 + F1 + F2) essentially (simplifying residual).
+        
+        //    If we visualize F2_1 -> A2, we are skipping the residual summation step.
+        //    However, `script.js` just draws lines between layers.
+        //    If we provide weights[3] as A2 weights?
+        //    A2 weights operate on Block 2 Input.
+        //    Block 2 Input is roughly F2_1 (plus residuals).
+        //    So using A2 weights for the connection F2_1 -> A2 is *plausible* for visualization.
+        //    It shows that A2 depends on the previous output via A2 weights.
+        
+        //    So:
+        //    Conn 0: In->A1 (A1 W)
+        //    Conn 1: A1->F1 (F1 W)
+        //    Conn 2: F1->F2 (F2 W)
+        //    Conn 3: F2->A2 (A2 W)
+        //    Conn 4: A2->F1 (F1 W)
+        //    Conn 5: F1->F2 (F2 W)
+        //    Conn 6: F2->Out (No W / Identity).
+        
+        //    So we need: [A1, F1, F2, A2, F1, F2, {}].
+        //    This means we simply concatenate all block weights, and append one empty at the end.
+        
+        for (const auto& block : blocks_) {
+            auto block_weights = block->get_weights_structured();
+            structured_weights.insert(structured_weights.end(), block_weights.begin(), block_weights.end());
+        }
+        
+        // Add one empty for the final connection (F2 -> Final Output)
+        structured_weights.push_back({});
+        
+        return structured_weights;
+    }
+
 void StreamingTransformer::process_stream() {
     while (streaming_active_) {
         std::unique_lock<std::mutex> lock(stream_mutex_);
@@ -279,6 +559,52 @@ void StreamingTransformer::optimize_for_memory() {
     std::swap(output_queue_, empty);
 }
 
+float StreamingTransformer::train_step(const std::vector<float>& input, const std::vector<float>& target) {
+    // Compute initial loss
+    std::vector<float> output = forward_single(input);
+    float initial_loss = 0.0f;
+    for (size_t i = 0; i < output.size() && i < target.size(); ++i) {
+        float diff = output[i] - target[i];
+        initial_loss += diff * diff;
+    }
+    
+    // Generate random seed
+    std::random_device rd;
+    unsigned int seed = rd();
+    float noise_std = 0.02f;
+    
+    // Perturb weights (positive direction)
+    perturb_weights(noise_std, seed, 1.0f);
+    
+    // Compute new loss
+    std::vector<float> new_output = forward_single(input);
+    float new_loss = 0.0f;
+    for (size_t i = 0; i < new_output.size() && i < target.size(); ++i) {
+        float diff = new_output[i] - target[i];
+        new_loss += diff * diff;
+    }
+    
+    // Hill Climbing (1+1 ES)
+    if (new_loss < initial_loss) {
+        std::cout << "Train step: Improved loss " << initial_loss << " -> " << new_loss << std::endl;
+        return new_loss;
+    } else {
+        // Revert changes (negative direction with same seed)
+        perturb_weights(noise_std, seed, -1.0f);
+        
+        // Verify revert
+        std::vector<float> reverted_output = forward_single(input);
+        float reverted_loss = 0.0f;
+        for (size_t i = 0; i < reverted_output.size() && i < target.size(); ++i) {
+           float diff = reverted_output[i] - target[i];
+           reverted_loss += diff * diff;
+        }
+        std::cout << "Train step: Reverted. Initial: " << initial_loss << ", New: " << new_loss << ", Reverted: " << reverted_loss << std::endl;
+        
+        return initial_loss;
+    }
+}
+
 size_t StreamingTransformer::get_memory_usage() const {
     size_t total = 0;
     
@@ -331,7 +657,7 @@ std::unique_ptr<StreamingTransformer> RealTimeTransformerFactory::create_for_edg
     config.n_heads = 4;
     config.n_layers = 2;
     config.d_ff = 512;
-    config.dropout = 0.1f;
+    config.dropout = 0.0f;
     config.max_sequence_length = 256;
     config.target_latency_ms = target_latency_ms;
     config.max_memory_mb = 2;
