@@ -10,6 +10,7 @@
 #include <cstring>
 #include <iostream>
 #include <cmath>
+#include <chrono>
 
 namespace ML {
 namespace Dynamic {
