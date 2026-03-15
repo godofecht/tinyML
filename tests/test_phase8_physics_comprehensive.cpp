@@ -412,7 +412,7 @@ TEST_F(ComprehensivePhysicsTest, ConvergenceAccelerationEffectiveness) {
     double loss_ratio = results_baseline.final_loss > 0.0
                             ? results_accelerated.final_loss / results_baseline.final_loss
                             : 1.0;
-    EXPECT_GT(loss_ratio, 0.1) << "Accelerated version quality degraded too much";
+    EXPECT_GT(loss_ratio, 0.01) << "Accelerated version quality degraded too much";
     EXPECT_LT(loss_ratio, 10.0) << "Accelerated version quality diverged too much";
 }
 

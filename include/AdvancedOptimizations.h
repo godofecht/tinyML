@@ -12,6 +12,9 @@
 #include <thread>
 #include <mutex>
 #include <atomic>
+#include <condition_variable>
+#include <functional>
+#include <queue>
 #include <unordered_map>
 #include <algorithm>
 #include <immintrin.h>
@@ -58,17 +61,18 @@ public:
 
 // Kernel Fusion - Combine operations for better performance
 class FusedKernel {
-private:
+public:
     struct FusedOperation {
         enum Type { ADD, MUL, TANH, RELU, MATMUL, ATTENTION } type;
         std::vector<float> parameters;
         bool is_fused;
     };
-    
+
+private:
     std::vector<FusedOperation> operations;
     std::vector<float> kernel_weights;
     bool is_compiled;
-    
+
 public:
     FusedKernel();
     
