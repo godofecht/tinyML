@@ -5,6 +5,7 @@
 *****************************************************************************/
 
 #include <gtest/gtest.h>
+#include <cmath>
 #include <chrono>
 #include <random>
 #include <vector>
