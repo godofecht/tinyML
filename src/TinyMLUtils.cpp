@@ -155,12 +155,12 @@ ModelConfig config_from_string(const std::string& config_str) {
 
 // PerformanceProfiler implementation
 void PerformanceProfiler::start_profiling() {
-    start_time_ = std::chrono::high_resolution_clock::now();
+    start_time_ = std::chrono::steady_clock::now();
     reset();
 }
 
 void PerformanceProfiler::end_profiling() {
-    auto end_time = std::chrono::high_resolution_clock::now();
+    auto end_time = std::chrono::steady_clock::now();
     auto duration = std::chrono::duration<double, std::milli>(end_time - start_time_);
     
     metrics_.avg_latency_ms = duration.count();
