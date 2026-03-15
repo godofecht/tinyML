@@ -16,6 +16,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <map>
+#include <queue>
 
 #include "XSIMDOperations.h"
 #include "LightweightAttention.h"
