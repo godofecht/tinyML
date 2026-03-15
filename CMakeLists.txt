@@ -50,6 +50,13 @@ endforeach()
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/GenerativeModels.cpp)
     list(APPEND EXISTING_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/GenerativeModels.cpp)
 endif()
+
+# Add AdvancedOptimizations on x86/x64 (needed by benchmark)
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|i[3-6]86")
+    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src/AdvancedOptimizations.cpp)
+        list(APPEND EXISTING_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/AdvancedOptimizations.cpp)
+    endif()
+endif()
 set(SOURCES ${EXISTING_SOURCES})
 
 # Print out the source files collected
