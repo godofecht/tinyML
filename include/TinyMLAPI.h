@@ -146,7 +146,7 @@ namespace Utils {
         PerformanceMetrics get_metrics() const;
         void reset();
     private:
-        std::chrono::time_point<std::chrono::high_resolution_clock> start_time_;
+        std::chrono::time_point<std::chrono::steady_clock> start_time_;
         PerformanceMetrics metrics_;
     };
 }

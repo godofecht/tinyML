@@ -7,6 +7,7 @@
 
 #include "TinyMLAPI.h"
 #include <gtest/gtest.h>
+#include <cmath>
 #include <fstream>
 #include <chrono>
 #include <thread>
