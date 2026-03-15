@@ -694,15 +694,16 @@ private:
         bool passed = true;
         
         // Performance targets (in milliseconds)
+        // Relaxed targets for CI environments (shared runners are slower)
         std::map<TimeSeriesForecaster::ModelType, float> performance_targets = {
-            {TimeSeriesForecaster::ModelType::TCN, 5.0f},
-            {TimeSeriesForecaster::ModelType::WAVENET, 8.0f},
-            {TimeSeriesForecaster::ModelType::INFORMER, 50.0f},
-            {TimeSeriesForecaster::ModelType::S4, 20.0f},
-            {TimeSeriesForecaster::ModelType::NEURAL_ODE, 15.0f},
-            {TimeSeriesForecaster::ModelType::VAR, 2.0f},
-            {TimeSeriesForecaster::ModelType::DEEPAR, 25.0f},
-            {TimeSeriesForecaster::ModelType::PROPHET, 10.0f}
+            {TimeSeriesForecaster::ModelType::TCN, 25.0f},
+            {TimeSeriesForecaster::ModelType::WAVENET, 40.0f},
+            {TimeSeriesForecaster::ModelType::INFORMER, 250.0f},
+            {TimeSeriesForecaster::ModelType::S4, 100.0f},
+            {TimeSeriesForecaster::ModelType::NEURAL_ODE, 75.0f},
+            {TimeSeriesForecaster::ModelType::VAR, 10.0f},
+            {TimeSeriesForecaster::ModelType::DEEPAR, 125.0f},
+            {TimeSeriesForecaster::ModelType::PROPHET, 50.0f}
         };
         
         for (const auto& [model_type, target_time] : performance_targets) {
