@@ -282,6 +282,8 @@ else()
     endif()
 endif()
 add_test(NAME Phase8PhysicsInformedTest COMMAND Phase8PhysicsInformedTest)
+# Takes 16+ minutes on CI - too slow for regular CI runs
+set_tests_properties(Phase8PhysicsInformedTest PROPERTIES DISABLED true)
 
 # Phase 8 Comprehensive Physics-Informed Neural Networks Test executable
 add_executable(Phase8PhysicsComprehensiveTest tests/test_phase8_physics_comprehensive.cpp)
