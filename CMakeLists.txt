@@ -328,6 +328,15 @@ else()
     endif()
 endif()
 
+# =============================================================================
+# BENCHMARKS
+# These are built but NOT registered as CTest tests so they don't run in CI.
+# Free GitHub Actions runners are too slow/unreliable for benchmarks — results
+# are meaningless on shared hardware and long runs waste CI minutes.
+# Run benchmarks locally:  cd build && ./bin/SIMDBenchmark
+# See TESTING.md for full details.
+# =============================================================================
+
 # SIMD Benchmark executable (using XSIMD)
 add_executable(SIMDBenchmark benchmarks/benchmark_xsimd.cpp)
 target_link_libraries(SIMDBenchmark TinyML gtest gtest_main)
@@ -340,7 +349,7 @@ else()
         target_include_directories(SIMDBenchmark PRIVATE "${CMAKE_BINARY_DIR}/_deps/xsimd-src/include")
     endif()
 endif()
-add_test(NAME SIMDBenchmark COMMAND SIMDBenchmark)
+# Not registered as ctest — run locally only
 
 # Physics-Informed Neural Networks Benchmark executable
 add_executable(PhysicsBenchmark EXCLUDE_FROM_ALL benchmarks/benchmark_physics.cpp)
@@ -365,12 +374,12 @@ add_test(NAME LightweightAttentionTest COMMAND LightweightAttentionTest)
 add_executable(AttentionBenchmark benchmarks/benchmark_attention.cpp)
 target_link_libraries(AttentionBenchmark TinyML gtest gtest_main)
 target_include_directories(AttentionBenchmark PUBLIC ${PROJECT_SOURCE_DIR}/include)
-add_test(NAME AttentionBenchmark COMMAND AttentionBenchmark)
+# Not registered as ctest — run locally only
 
 # Simple Attention Benchmark executable (standalone)
 add_executable(SimpleAttentionBenchmark benchmarks/benchmark_simple_attention.cpp)
 target_include_directories(SimpleAttentionBenchmark PUBLIC ${PROJECT_SOURCE_DIR}/include)
-add_test(NAME SimpleAttentionBenchmark COMMAND SimpleAttentionBenchmark)
+# Not registered as ctest — run locally only
 
 # Advanced Optimizations Benchmark executable - disabled until
 # AdvancedOptimizations.cpp is fixed (missing member fields, headers)
@@ -418,7 +427,7 @@ else()
         target_include_directories(ReinforcementLearningBenchmark PRIVATE "${CMAKE_BINARY_DIR}/_deps/xsimd-src/include")
     endif()
 endif()
-add_test(NAME ReinforcementLearningBenchmark COMMAND ReinforcementLearningBenchmark)
+# Not registered as ctest — segfaults on CI, run locally only
 
 # Phase 11 Generative Models Test executable
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/tests/test_phase11_generative.cpp)
@@ -449,7 +458,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/benchmarks/benchmark_generative.cpp)
             target_include_directories(GenerativeModelsBenchmark PRIVATE "${CMAKE_BINARY_DIR}/_deps/xsimd-src/include")
         endif()
     endif()
-    add_test(NAME GenerativeModelsBenchmark COMMAND GenerativeModelsBenchmark)
+    # Not registered as ctest — run locally only
 endif()
 
 # Debugging: Print the include directories that will be passed to the compiler
