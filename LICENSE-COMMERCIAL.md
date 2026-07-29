@@ -1,14 +1,19 @@
-tinyML Proprietary License v1
+tinyML Commercial License v1
 
 Copyright (c) 2024-2026 Abhishek Shivakumar
 
+Scope
+This license covers only the commercial tier listed in LICENSING.md. The tinyML
+core is MIT licensed and is governed by LICENSE, not by this document. Where
+the two overlap, LICENSE governs the core.
+
 Summary
-- This software is proprietary. You may not use, copy, modify, or distribute it except as expressly permitted below.
+- The commercial tier is proprietary. You may not use, copy, modify, or distribute it except as expressly permitted below.
 - Commercial use requires a paid license.
 - Attribution is required for any permitted use.
 
 1. Definitions
-"Software" means the tinyML codebase, binaries, documentation, and any derivative works.
+"Software" means the headers listed under "Commercial" in LICENSING.md, together with their binaries, documentation, and any derivative works. It does not include the MIT core.
 "Commercial use" means any use primarily intended for commercial advantage, monetary compensation, or use within a for-profit organization.
 
 2. License Grant
