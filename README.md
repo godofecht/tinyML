@@ -1,6 +1,6 @@
 # TinyML: High-Performance C++ Machine Learning Library
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![License](https://img.shields.io/badge/license-MIT%20core%20%2B%20commercial-blue.svg)
 ![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)
 ![Standard](https://img.shields.io/badge/C%2B%2B-17%2F20-blue.svg)
 
@@ -118,4 +118,12 @@ Detailed design documents and phase breakdowns can be found in the `blog/` direc
 ---
 
 ## 📝 License
-MIT License - Free for educational and commercial use.
+
+tinyML is dual licensed. The zero-dependency core is MIT, free for any use
+including commercial. The extended model library (attention, transformers,
+generative, graph, RL, forecasting, production API) requires xsimd and is
+covered by a commercial license: free for research, education and personal
+projects, paid for commercial use.
+
+[LICENSING.md](LICENSING.md) lists exactly which headers fall on each side.
+No MIT header includes a commercial one, so the core builds and ships alone.
