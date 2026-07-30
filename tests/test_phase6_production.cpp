@@ -5,6 +5,7 @@
 *****************************************************************************/
 
 #include <gtest/gtest.h>
+#include "perf_assert.h"
 #include <cmath>
 #include <chrono>
 #include <random>
@@ -627,10 +628,12 @@ TEST_F(Phase6ProductionTest, ProductionPerformanceBenchmarks) {
     std::cout << std::string(75, '-') << std::endl;
     
     // Performance targets from roadmap
-    EXPECT_LT(audio_avg_ms, 10) << "Audio processing should be <10ms";
-    EXPECT_LT(ts_avg_ms, 10) << "Time series processing should be <10ms";
-    EXPECT_LT(vision_avg_ms, 100) << "Vision processing should be <100ms";
-    EXPECT_LT(text_avg_ms, 20) << "Text processing should be <20ms";
+    TINYML_IF_PERF_ASSERTS {
+        EXPECT_LT(audio_avg_ms, 10) << "Audio processing should be <10ms";
+        EXPECT_LT(ts_avg_ms, 10) << "Time series processing should be <10ms";
+        EXPECT_LT(vision_avg_ms, 100) << "Vision processing should be <100ms";
+        EXPECT_LT(text_avg_ms, 20) << "Text processing should be <20ms";
+    }
 }
 
 // Test Integration Points Robustness
@@ -763,8 +766,10 @@ TEST_F(Phase6ProductionTest, ProductionDeploymentScenarios) {
     std::cout << std::string(80, '-') << std::endl;
     
     // Verify deployment targets
-    EXPECT_LT(speech_avg_ms, 10) << "Speech enhancement should be <10ms for real-time";
-    EXPECT_LT(iot_avg_ms, 5) << "IoT analytics should be <5ms";
-    EXPECT_LT(edge_avg_ms, 100) << "Edge detection should be <100ms";
-    EXPECT_LT(text_avg_ms, 10) << "Device text processing should be <10ms";
+    TINYML_IF_PERF_ASSERTS {
+        EXPECT_LT(speech_avg_ms, 10) << "Speech enhancement should be <10ms for real-time";
+        EXPECT_LT(iot_avg_ms, 5) << "IoT analytics should be <5ms";
+        EXPECT_LT(edge_avg_ms, 100) << "Edge detection should be <100ms";
+        EXPECT_LT(text_avg_ms, 10) << "Device text processing should be <10ms";
+    }
 }

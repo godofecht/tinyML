@@ -5,14 +5,18 @@ on:
   pull_request:
     branches: [ main ]
 
-  # Release builds: triggered by version tags (v1.0.0, v2.3.1, etc.)
+  # Same check on main, so the branch keeps a current status. Without this
+  # the README and profile badges stay frozen on whatever ran last.
   push:
+    branches: [ main ]
+
+    # Release builds: triggered by version tags (v1.0.0, v2.3.1, etc.)
     tags:
       - 'v*'
 
 jobs:
   # ---------------------------------------------------------------
-  # Quick CI gate — runs on every PR to main
+  # Quick CI gate — runs on every PR to main and every push to main
   # Builds the library and runs only fast unit tests (<2 min total).
   # Benchmarks and long-running tests are SKIPPED here because
   # GitHub's free runners are too slow / unreliable for them.
@@ -46,7 +50,6 @@ jobs:
     - name: Run unit tests (benchmarks excluded)
       run: |
         cd build
-        ctest --output-on-failure --timeout 120 -L unit 2>/dev/null || \
         ctest --output-on-failure --timeout 120
         echo "See TESTING.md for info on skipped/disabled tests"
 
