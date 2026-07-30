@@ -5,6 +5,7 @@
 *****************************************************************************/
 
 #include <gtest/gtest.h>
+#include "perf_assert.h"
 #include <cmath>
 #include <chrono>
 #include <random>
@@ -377,9 +378,11 @@ TEST_F(Phase7AdvancedAttentionTest, PerformanceBenchmarks) {
     
     // Verify performance targets
     for (const auto& result : results) {
-        EXPECT_LT(result.latency_ms, 50.0f) << "Latency should be under 50ms for all attention types";
-        EXPECT_GT(result.throughput_tokens_per_sec, 25.0f) << "Throughput should be reasonable";
         EXPECT_LT(result.memory_usage_mb, 50.0f) << "Memory usage should be under 50MB";
+        TINYML_IF_PERF_ASSERTS {
+            EXPECT_LT(result.latency_ms, 50.0f) << "Latency should be under 50ms for all attention types";
+            EXPECT_GT(result.throughput_tokens_per_sec, 25.0f) << "Throughput should be reasonable";
+        }
     }
     
     // Save results

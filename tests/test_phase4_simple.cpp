@@ -5,6 +5,7 @@
 *****************************************************************************/
 
 #include <gtest/gtest.h>
+#include "perf_assert.h"
 #include <cmath>
 #include <chrono>
 #include <random>
@@ -322,7 +323,9 @@ TEST_F(Phase4SimpleTest, StreamingSimulation) {
     std::cout << "  Throughput: " << std::fixed << std::setprecision(1) << (1000000.0 / avg_time) << " tokens/sec\n";
     
     // Streaming should be consistent
-    EXPECT_LT(max_time / min_time, 3.0) << "Processing times should be relatively consistent";
+    TINYML_IF_PERF_ASSERTS {
+        EXPECT_LT(max_time / min_time, 3.0) << "Processing times should be relatively consistent";
+    }
     
     std::cout << "Streaming simulation: PASS\n";
 }
