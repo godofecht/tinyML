@@ -2,6 +2,8 @@ name: Diagnose disabled tests
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ diag/disabled-tests-linux ]
 
 jobs:
   linux:
