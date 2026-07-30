@@ -5,6 +5,7 @@
 *****************************************************************************/
 
 #include <gtest/gtest.h>
+#include "perf_assert.h"
 #include <cmath>
 #include <chrono>
 #include <random>
@@ -209,8 +210,10 @@ TEST_F(Phase1SIMDTest, PerformanceTargetsValidation) {
                   << std::setw(15) << std::fixed << std::setprecision(2) << avg_time
                   << std::setw(12) << target_us << std::setw(10) << status << std::endl;
         
-        EXPECT_LE(avg_time, target_us) 
-            << name << " performance target not met: " << avg_time << "μs > " << target_us << "μs";
+        TINYML_IF_PERF_ASSERTS {
+            EXPECT_LE(avg_time, target_us)
+                << name << " performance target not met: " << avg_time << "μs > " << target_us << "μs";
+        }
     };
     
     // Performance targets based on roadmap goals

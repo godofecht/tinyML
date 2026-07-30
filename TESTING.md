@@ -33,6 +33,28 @@ cd build
 ./bin/GenerativeModelsBenchmark
 ```
 
+### Timing assertions (skipped unless asked for)
+
+Four tests assert wall-clock thresholds:
+
+| Test | Asserts |
+|---|---|
+| `Phase1SIMDTest.PerformanceTargetsValidation` | per-op time against a target in µs |
+| `Phase6ProductionTest.ProductionPerformanceBenchmarks` | audio, time series, vision and text latency |
+| `Phase6ProductionTest.ProductionDeploymentScenarios` | speech, IoT, edge and device-text latency |
+| `Phase7AdvancedAttentionTest.PerformanceBenchmarks` | attention latency and throughput |
+
+On a shared runner these measure the runner. The correctness assertions in the
+same tests always run; the timing ones are opt-in:
+
+```bash
+TINYML_PERF_ASSERTS=1 ctest --output-on-failure
+```
+
+The measured numbers print either way. The current targets do not hold on a
+GitHub runner, and `Phase7AdvancedAttentionTest` throughput sits near its 25
+tok/s line even on a loaded laptop, so treat them as goals rather than facts.
+
 ### Disabled tests (registered but skipped)
 
 | Test | Why disabled |
