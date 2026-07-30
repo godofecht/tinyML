@@ -35,13 +35,14 @@ cd build
 
 ### Timing assertions (skipped unless asked for)
 
-Four tests assert wall-clock thresholds:
+Five tests assert wall-clock thresholds:
 
 | Test | Asserts |
 |---|---|
 | `Phase1SIMDTest.PerformanceTargetsValidation` | per-op time against a target in µs |
 | `Phase6ProductionTest.ProductionPerformanceBenchmarks` | audio, time series, vision and text latency |
 | `Phase6ProductionTest.ProductionDeploymentScenarios` | speech, IoT, edge and device-text latency |
+| `Phase4SimpleTest.StreamingSimulation` | jitter, as max/min per-token time |
 | `Phase7AdvancedAttentionTest.PerformanceBenchmarks` | attention latency and throughput |
 
 On a shared runner these measure the runner. The correctness assertions in the
