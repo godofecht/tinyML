@@ -2,7 +2,7 @@
 
 ## What runs in CI
 
-CI runs on **pull requests to `main`** and **release tags** (`v*`).
+CI runs on **pull requests to `main`**, **pushes to `main`** and **release tags** (`v*`).
 Only fast unit tests execute in CI — the full suite finishes in under 2 minutes.
 
 ```
