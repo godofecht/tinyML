@@ -1,0 +1,52 @@
+name: Diagnose disabled tests
+
+on:
+  workflow_dispatch:
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Deps
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake g++ libgtest-dev
+        cd /usr/src/gtest && sudo cmake . && sudo make && sudo cp lib/*.a /usr/lib
+
+    - name: Build (release)
+      run: |
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+        cmake --build build -j$(nproc)
+
+    - name: RL test, plain
+      continue-on-error: true
+      run: |
+        cd build
+        ./bin/Phase12ReinforcementTest; echo "exit=$?"
+
+    - name: Physics comprehensive, timed
+      continue-on-error: true
+      run: |
+        cd build
+        /usr/bin/time -v ./bin/Phase8PhysicsComprehensiveTest 2>&1 | tail -30; echo "exit=$?"
+
+    - name: Physics informed, timed with a 20 min cap
+      continue-on-error: true
+      run: |
+        cd build
+        timeout 1200 /usr/bin/time -v ./bin/Phase8PhysicsInformedTest 2>&1 | tail -30; echo "exit=$?"
+
+    - name: Build with ASan + UBSan
+      run: |
+        cmake -S . -B asan -DCMAKE_BUILD_TYPE=Debug \
+          -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-omit-frame-pointer -g"
+        cmake --build asan -j$(nproc) --target Phase12ReinforcementTest
+
+    - name: RL test under sanitizers
+      continue-on-error: true
+      run: |
+        cd asan
+        ASAN_OPTIONS=detect_leaks=0:abort_on_error=0 \
+        UBSAN_OPTIONS=print_stacktrace=1 \
+        ./bin/Phase12ReinforcementTest 2>&1 | tail -60; echo "exit=$?"
