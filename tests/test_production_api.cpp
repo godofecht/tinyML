@@ -269,3 +269,218 @@ TEST_F(TinyMLAPITest, HardwareAcceleration) {
     EXPECT_TRUE(gpu_enabled || !gpu_enabled); // Always true, just checking no crash
     EXPECT_TRUE(metal_enabled || !metal_enabled);
 }
+
+TEST_F(TinyMLAPITest, SystemInformation) {
+    ModelConfig config;
+    config.embed_dim = 64;
+    config.num_heads = 2;
+    config.num_layers = 1;
+    config.sequence_length = 128;
+
+    EXPECT_TRUE(api_->create_model(config));
+    
+    std::string model_info = api_->get_model_info();
+    EXPECT_FALSE(model_info.empty());
+    EXPECT_NE(model_info.find("Embedding Dimension"), std::string::npos);
+    
+    std::string system_info = api_->get_system_info();
+    EXPECT_FALSE(system_info.empty());
+    EXPECT_NE(system_info.find("CPU Cores"), std::string::npos);
+}
+
+TEST_F(TinyMLAPITest, SelfTest) {
+    ModelConfig config;
+    config.embed_dim = 64;
+    config.num_heads = 2;
+    config.num_layers = 1;
+    config.sequence_length = 128;
+
+    EXPECT_TRUE(api_->create_model(config));
+    
+    EXPECT_TRUE(api_->run_self_test());
+}
+
+TEST_F(TinyMLAPITest, FactoryFunctions) {
+    // Test edge device factory
+    auto edge_api = create_tinyml_api_for_edge();
+    EXPECT_NE(edge_api, nullptr);
+    
+    auto edge_config = edge_api->get_model_config();
+    EXPECT_EQ(edge_config.embed_dim, 128);
+    EXPECT_EQ(edge_config.num_heads, 4);
+    
+    // Test mobile device factory
+    auto mobile_api = create_tinyml_api_for_mobile();
+    EXPECT_NE(mobile_api, nullptr);
+    
+    auto mobile_config = mobile_api->get_model_config();
+    EXPECT_EQ(mobile_config.embed_dim, 64);
+    EXPECT_EQ(mobile_config.num_heads, 2);
+    
+    // Test server device factory
+    auto server_api = create_tinyml_api_for_server();
+    EXPECT_NE(server_api, nullptr);
+    
+    auto server_config = server_api->get_model_config();
+    EXPECT_EQ(server_config.embed_dim, 512);
+    EXPECT_EQ(server_config.num_heads, 16);
+}
+
+class TinyMLUtilsTest : public ::testing::Test {
+protected:
+    void SetUp() override {}
+};
+
+TEST_F(TinyMLUtilsTest, PredefinedConfigs) {
+    auto configs = Utils::get_predefined_configs();
+    EXPECT_EQ(configs.size(), 4);
+    
+    // Check mobile config
+    auto& mobile = configs[0];
+    EXPECT_EQ(mobile.embed_dim, 64);
+    EXPECT_EQ(mobile.num_heads, 2);
+    EXPECT_EQ(mobile.num_layers, 1);
+    
+    // Check edge config
+    auto& edge = configs[1];
+    EXPECT_EQ(edge.embed_dim, 128);
+    EXPECT_EQ(edge.num_heads, 4);
+    EXPECT_EQ(edge.num_layers, 2);
+    
+    // Check server config
+    auto& server = configs[2];
+    EXPECT_EQ(server.embed_dim, 512);
+    EXPECT_EQ(server.num_heads, 16);
+    EXPECT_EQ(server.num_layers, 6);
+}
+
+TEST_F(TinyMLUtilsTest, ConfigValidation) {
+    // Valid config
+    ModelConfig valid_config;
+    valid_config.embed_dim = 128;
+    valid_config.num_heads = 8;
+    valid_config.num_layers = 2;
+    valid_config.sequence_length = 256;
+    valid_config.dropout_rate = 0.1f;
+    valid_config.device = "cpu";
+    
+    EXPECT_TRUE(Utils::validate_config(valid_config));
+    
+    // Invalid embed_dim
+    ModelConfig invalid_embed = valid_config;
+    invalid_embed.embed_dim = 0;
+    EXPECT_FALSE(Utils::validate_config(invalid_embed));
+    
+    // Invalid num_heads
+    ModelConfig invalid_heads = valid_config;
+    invalid_heads.num_heads = 0;
+    EXPECT_FALSE(Utils::validate_config(invalid_heads));
+    
+    // Embed_dim not divisible by num_heads
+    ModelConfig invalid_divisible = valid_config;
+    invalid_divisible.embed_dim = 100;
+    invalid_divisible.num_heads = 3;
+    EXPECT_FALSE(Utils::validate_config(invalid_divisible));
+    
+    // Invalid dropout rate
+    ModelConfig invalid_dropout = valid_config;
+    invalid_dropout.dropout_rate = 1.5f;
+    EXPECT_FALSE(Utils::validate_config(invalid_dropout));
+}
+
+TEST_F(TinyMLUtilsTest, ConfigSerialization) {
+    ModelConfig original;
+    original.embed_dim = 256;
+    original.num_heads = 8;
+    original.num_layers = 4;
+    original.sequence_length = 512;
+    original.dropout_rate = 0.1f;
+    original.use_quantization = true;
+    original.device = "gpu";
+    
+    std::string config_str = Utils::config_to_string(original);
+    EXPECT_FALSE(config_str.empty());
+    EXPECT_NE(config_str.find("embed_dim=256"), std::string::npos);
+    EXPECT_NE(config_str.find("num_heads=8"), std::string::npos);
+    
+    ModelConfig deserialized = Utils::config_from_string(config_str);
+    EXPECT_EQ(deserialized.embed_dim, original.embed_dim);
+    EXPECT_EQ(deserialized.num_heads, original.num_heads);
+    EXPECT_EQ(deserialized.num_layers, original.num_layers);
+    EXPECT_EQ(deserialized.sequence_length, original.sequence_length);
+    EXPECT_FLOAT_EQ(deserialized.dropout_rate, original.dropout_rate);
+    EXPECT_EQ(deserialized.use_quantization, original.use_quantization);
+    EXPECT_EQ(deserialized.device, original.device);
+}
+
+TEST_F(TinyMLUtilsTest, PerformanceProfiler) {
+    Utils::PerformanceProfiler profiler;
+    
+    profiler.start_profiling();
+    
+    // Simulate some work
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    
+    profiler.end_profiling();
+    
+    auto metrics = profiler.get_metrics();
+    EXPECT_GT(metrics.avg_latency_ms, 10.0); // Should be at least 10ms
+    EXPECT_EQ(metrics.total_inferences, 1);
+    EXPECT_GT(metrics.throughput_tokens_per_sec, 0.0);
+    
+    profiler.reset();
+    auto reset_metrics = profiler.get_metrics();
+    EXPECT_EQ(reset_metrics.total_inferences, 0);
+}
+
+// Integration test for the complete workflow
+class TinyMLIntegrationTest : public ::testing::Test {
+protected:
+    void SetUp() override {
+        api_ = create_tinyml_api_for_edge();
+    }
+
+    void TearDown() override {
+        api_->destroy_model();
+    }
+
+    std::unique_ptr<TinyMLAPI> api_;
+};
+
+TEST_F(TinyMLIntegrationTest, CompleteWorkflow) {
+    // Model should already be created by factory function
+    
+    // 1. Run self-test
+    EXPECT_TRUE(api_->run_self_test());
+    
+    // 2. Optimize for edge deployment
+    DeploymentConfig deploy_config;
+    deploy_config.target_platform = "edge";
+    deploy_config.enable_hardware_acceleration = false;
+    EXPECT_TRUE(api_->deploy_model(deploy_config));
+    
+    // 3. Process some data
+    std::vector<float> input(128, 0.1f);
+    auto result = api_->predict(input);
+    EXPECT_TRUE(result.success);
+    
+    // 4. Check performance
+    auto metrics = api_->get_performance_metrics();
+    EXPECT_GT(metrics.total_inferences, 0);
+    
+    // 5. Export model
+    EXPECT_TRUE(api_->export_model("native", "integration_test_model.bin"));
+    
+    // 6. Load and verify
+    api_->destroy_model();
+    EXPECT_TRUE(api_->load_model("integration_test_model.bin"));
+    EXPECT_TRUE(api_->run_self_test());
+    
+    // Cleanup
+    std::remove("integration_test_model.bin");
+}
+
+int main(int argc, char** argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
+}
