@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   build-and-test:
-    name: ${{ matrix.compiler }} / Release
+    name: ${{ matrix.compiler }} / ${{ matrix.build_type }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -26,9 +26,11 @@ jobs:
           - compiler: GCC
             cc: gcc
             cxx: g++
+            build_type: Release
           - compiler: Clang
             cc: clang
             cxx: clang++
+            build_type: Debug
     env:
       CC: ${{ matrix.cc }}
       CXX: ${{ matrix.cxx }}
@@ -43,7 +45,7 @@ jobs:
           sudo apt-get install -y ninja-build
 
       - name: Configure
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
 
       - name: Build
         run: cmake --build build --parallel 2
@@ -75,10 +77,13 @@ jobs:
 
       - name: Package
         run: |
-          mkdir -p release
-          cp build/libTinyML.a release/
-          find build/bin -type f -executable -exec cp {} release/ \; 2>/dev/null || true
-          tar -czf tinyml-${{ github.ref_name }}-linux-x86_64.tar.gz -C release .
+          package_dir="tinyml-${{ github.ref_name }}-linux-x86_64"
+          mkdir -p "$package_dir/lib" "$package_dir/include"
+          cp build/libTinyML.a "$package_dir/lib/"
+          cp -R include/. "$package_dir/include/"
+          cp README.md LICENSE LICENSE-COMMERCIAL.md LICENSING.md "$package_dir/"
+          tar -czf "$package_dir.tar.gz" "$package_dir"
+          tar -tzf "$package_dir.tar.gz" | head -80
 
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
