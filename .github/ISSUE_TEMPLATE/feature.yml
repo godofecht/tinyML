@@ -1,0 +1,47 @@
+name: Feature request
+description: Propose a new algorithm, API, platform, optimization, or repository capability
+title: "[Feature]: "
+labels: []
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What concrete problem should tinyML solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the desired API, behaviour, algorithm, platform support, or workflow.
+    validations:
+      required: true
+  - type: dropdown
+    id: tier
+    attributes:
+      label: Intended tier
+      options:
+        - MIT core
+        - Extended/commercial tier
+        - Repository/tooling/docs
+        - Unsure
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints and trade-offs
+      description: Include real-time, memory, determinism, dependency, portability, licensing, or numerical constraints that matter.
+  - type: textarea
+    id: validation
+    attributes:
+      label: How should this be validated?
+      description: Tests, benchmarks, reference outputs, downstream examples, or acceptance criteria.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues and the roadmap for an equivalent proposal.
+          required: true
