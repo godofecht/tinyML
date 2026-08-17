@@ -1,62 +1,56 @@
 name: CI
 
 on:
-  # Fast check on PRs — build + unit tests only (no benchmarks)
   pull_request:
-    branches: [ main ]
-
-  # Same check on main, so the branch keeps a current status. Without this
-  # the README and profile badges stay frozen on whatever ran last.
+    branches: [main]
   push:
-    branches: [ main ]
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
 
-    # Release builds: triggered by version tags (v1.0.0, v2.3.1, etc.)
-    tags:
-      - 'v*'
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  # ---------------------------------------------------------------
-  # Quick CI gate — runs on every PR to main and every push to main
-  # Builds the library and runs only fast unit tests (<2 min total).
-  # Benchmarks and long-running tests are SKIPPED here because
-  # GitHub's free runners are too slow / unreliable for them.
-  # See TESTING.md for the full rationale.
-  # ---------------------------------------------------------------
   build-and-test:
+    name: ${{ matrix.compiler }} / Release
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - compiler: GCC
+            cc: gcc
+            cxx: g++
+          - compiler: Clang
+            cc: clang
+            cxx: clang++
+    env:
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Set up C++ environment
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential cmake g++ libgtest-dev
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
 
-    - name: Build and install Google Test
-      run: |
-        cd /usr/src/gtest
-        sudo cmake .
-        sudo make
-        sudo cp lib/*.a /usr/lib
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
-    - name: Configure CMake
-      run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --parallel 2
 
-    - name: Build the project
-      run: cmake --build build -j$(nproc)
+      - name: Test
+        run: ctest --test-dir build --output-on-failure --timeout 120
 
-    - name: Run unit tests (benchmarks excluded)
-      run: |
-        cd build
-        ctest --output-on-failure --timeout 120
-        echo "See TESTING.md for info on skipped/disabled tests"
-
-  # ---------------------------------------------------------------
-  # Release job — only runs when a version tag is pushed.
-  # Builds an optimised binary and uploads it as a GitHub Release.
-  # ---------------------------------------------------------------
   release:
     if: startsWith(github.ref, 'refs/tags/v')
     needs: build-and-test
@@ -65,40 +59,29 @@ jobs:
       contents: write
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Set up C++ environment
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential cmake g++ libgtest-dev
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build
 
-    - name: Build and install Google Test
-      run: |
-        cd /usr/src/gtest
-        sudo cmake .
-        sudo make
-        sudo cp lib/*.a /usr/lib
+      - name: Configure
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
-    - name: Build release binaries
-      run: |
-        cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-        cmake --build build -j$(nproc)
+      - name: Build
+        run: cmake --build build --parallel 2
 
-    - name: Package binaries
-      run: |
-        mkdir -p release
-        # Copy library
-        cp build/libTinyML.a release/
-        # Copy test/benchmark executables (if they exist)
-        find build/bin -type f -executable -exec cp {} release/ \; 2>/dev/null || true
-        find build -maxdepth 1 -type f -executable -exec cp {} release/ \; 2>/dev/null || true
-        # Create tarball
-        tar -czf tinyml-${{ github.ref_name }}-linux-x86_64.tar.gz -C release .
-        ls -lh tinyml-${{ github.ref_name }}-linux-x86_64.tar.gz
+      - name: Package
+        run: |
+          mkdir -p release
+          cp build/libTinyML.a release/
+          find build/bin -type f -executable -exec cp {} release/ \; 2>/dev/null || true
+          tar -czf tinyml-${{ github.ref_name }}-linux-x86_64.tar.gz -C release .
 
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v2
-      with:
-        files: tinyml-${{ github.ref_name }}-linux-x86_64.tar.gz
-        generate_release_notes: true
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: tinyml-${{ github.ref_name }}-linux-x86_64.tar.gz
+          generate_release_notes: true
