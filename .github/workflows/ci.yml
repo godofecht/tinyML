@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   build-and-test:
-    name: ${{ matrix.compiler }} / Release
+    name: ${{ matrix.compiler }} / ${{ matrix.build_type }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -26,9 +26,11 @@ jobs:
           - compiler: GCC
             cc: gcc
             cxx: g++
+            build_type: Release
           - compiler: Clang
             cc: clang
             cxx: clang++
+            build_type: Debug
     env:
       CC: ${{ matrix.cc }}
       CXX: ${{ matrix.cxx }}
@@ -43,7 +45,7 @@ jobs:
           sudo apt-get install -y ninja-build
 
       - name: Configure
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
 
       - name: Build
         run: cmake --build build --parallel 2
