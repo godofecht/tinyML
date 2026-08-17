@@ -1,0 +1,62 @@
+name: Bug report
+description: Report a reproducible correctness, build, API, or runtime problem
+title: "[Bug]: "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to report a bug. Please keep performance-only regressions separate from correctness failures where possible.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the observed behaviour and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction
+      description: Include the smallest source/configuration and commands needed to reproduce the problem.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: tinyML commit or release
+      placeholder: e.g. main at abc1234 or v1.0.0
+    validations:
+      required: true
+  - type: dropdown
+    id: build
+    attributes:
+      label: Build tier
+      options:
+        - MIT core
+        - Extended/commercial tier
+        - Unsure
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, architecture, compiler and version, CMake version, CPU features, and relevant build flags.
+      placeholder: Ubuntu 24.04, x86_64, GCC 14, CMake 3.30, AVX2, Release
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or output
+      render: text
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues for the same problem.
+          required: true
+        - label: I have not included secrets, private data, or proprietary model/data content.
+          required: true
