@@ -1,0 +1,26 @@
+@PACKAGE_INIT@
+
+include(CMakeFindDependencyMacro)
+
+set(TinyML_EXTENDED_AVAILABLE "@TINYML_BUILD_EXTENDED@")
+
+include("${CMAKE_CURRENT_LIST_DIR}/TinyMLCoreTargets.cmake")
+set(TinyML_Core_FOUND TRUE)
+set(TinyML_Extended_FOUND FALSE)
+
+if(NOT TinyML_FIND_COMPONENTS)
+    set(TinyML_FIND_COMPONENTS Core)
+    if(TinyML_EXTENDED_AVAILABLE)
+        list(APPEND TinyML_FIND_COMPONENTS Extended)
+    endif()
+endif()
+
+if("Extended" IN_LIST TinyML_FIND_COMPONENTS)
+    if(TinyML_EXTENDED_AVAILABLE)
+        find_dependency(xsimd 12.1 CONFIG)
+        include("${CMAKE_CURRENT_LIST_DIR}/TinyMLExtendedTargets.cmake")
+        set(TinyML_Extended_FOUND TRUE)
+    endif()
+endif()
+
+check_required_components(TinyML)

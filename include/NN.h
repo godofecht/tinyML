@@ -1,16 +1,11 @@
-//****************************************************************************
-/* Copyright (C) Abhishek Shivakumar - All Rights Reserved
- * Unauthorized copying of this file, via any medium is strictly prohibited
- * Proprietary and confidential
- * Written by Abhishek Shivakumar <abhishek.shivakumar@gmail.com>, 22/04/2022
-*****************************************************************************/
+// SPDX-License-Identifier: MIT
+// Copyright (c) Abhishek Shivakumar
 
 #ifndef NN_H
 #define NN_H
 
-#include <vector>
 #include <memory>
-#include <cmath>
+#include <vector>
 
 namespace ML
 {
@@ -20,45 +15,51 @@ namespace ML
     class Neuron
     {
     public:
-        Neuron(unsigned numOutputs, unsigned neuronIndex);
+        Neuron (unsigned numOutputs, unsigned neuronIndex);
 
-        void calcHiddenGradients(const Layer& nextLayer);
-        void calcOutputGradients(double targetVal);
-        void feedForward(Layer& prevLayer);
-        void updateInputWeights(Layer& prevLayer);
+        void calcHiddenGradients (const Layer& nextLayer);
+        void calcOutputGradients (double targetVal);
+        void feedForward (Layer& prevLayer);
+        void updateInputWeights (Layer& prevLayer);
 
-        static double transferFunction(double x);
-        static double transferFunctionDerivative(double x);
+        static double transferFunction (double x);
+        static double transferFunctionDerivative (double x);
 
         double getOutputVal() const;
-        void setOutputVal(double value);
+        void setOutputVal (double value);
         int getIndex() const;
 
     private:
-        double randomWeight();
-        double sumDOW(const Layer& nextLayer) const;
-
-        double outputVal;
-        double gradient;
-        double error;
-        double recentAverageError;
-        unsigned index;
-
         struct connection
         {
-            double weight;
-            double deltaweight;
+            double weight = 0.0;
+            double deltaweight = 0.0;
         };
 
+        double randomWeight();
+        double sumDOW (const Layer& nextLayer) const;
+
+        double outputVal = 0.0;
+        double gradient = 0.0;
+        double error = 0.0;
+        double recentAverageError = 0.0;
+        unsigned index = 0;
         std::vector<std::unique_ptr<connection>> outputWeights;
 
-        static constexpr double eta = 0.15;   // learning rate
-        static constexpr double alpha = 0.5;  // momentum
+        static constexpr double eta = 0.15;
+        static constexpr double alpha = 0.5;
 
-	public:
-		const std::vector<std::unique_ptr<connection>>& getOutputWeights() const { return outputWeights; }
-		std::vector<std::unique_ptr<connection>>& getOutputWeights() { return outputWeights; }
-	};
+    public:
+        const std::vector<std::unique_ptr<connection>>& getOutputWeights() const noexcept
+        {
+            return outputWeights;
+        }
+
+        std::vector<std::unique_ptr<connection>>& getOutputWeights() noexcept
+        {
+            return outputWeights;
+        }
+    };
 }
 
 #endif // NN_H

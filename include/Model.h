@@ -1,186 +1,93 @@
-//****************************************************************************
-/* Copyright (C) Abhishek Shivakumar - All Rights Reserved
- * Unauthorized copying of this file, via any medium is strictly prohibited
- * Proprietary and confidential
- * Written by Abhishek Shivakumar <abhishek.shivakumar@gmail.com>, 22/04/2022
-*****************************************************************************/
+// SPDX-License-Identifier: MIT
+// Copyright (c) Abhishek Shivakumar
 
 #ifndef MODEL_H
 #define MODEL_H
 
 #include "Network.h"
-#include <iostream>
+
 #include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <limits>
+#include <stdexcept>
+#include <string>
+#include <utility>
 #include <vector>
-#include <cassert>
 
 namespace ML
 {
-    /**
-     * @brief The Model class encapsulates the Network class, providing methods to train,
-     * update, and query the network. It also includes utilities for saving and loading weights.
-     * 
-     * Usage:
-     * 
-     * 1. Initialize the Model with a topology (vector<unsigned>) defining the number of neurons in each layer.
-     * 2. Use the `feedForward` method to pass inputs through the network.
-     * 3. Use the `getResult` method to obtain the network's output.
-     * 4. Use the `backPropagate` method to train the network with target values.
-     * 5. Save and load weights using `saveWeightsToFile` and `loadWeightsFromFile`.
-     * 
-     * Example:
-     * 
-     * ```
-     * std::vector<unsigned> topology = {3, 2, 1}; // 3 neurons in the input layer, 2 in the hidden, 1 in the output
-     * ML::Model model(topology);
-     * 
-     * std::vector<double> inputVals = {1.0, 0.5, -1.5};
-     * model.FeedForward(inputVals);
-     * 
-     * std::vector<double> results = model.GetResult();
-     * model.BackPropagate({0.8}); // Assuming the target value is 0.8 for the output
-     * 
-     * model.SaveWeightsToFile("weights.txt");
-     * model.LoadWeightsFromFile("weights.txt");
-     * ```
-     */
     class Model
     {
-    private:
-        Network thisNetwork;             // The neural network associated with this model
-        std::vector<unsigned> topology;  // The topology of the network (number of neurons per layer)
-        std::vector<double> weights;     // Cache for the weights of the network
-
     public:
-        /**
-         * @brief Constructor that initializes the model with the given topology.
-         * 
-         * @param tp The topology defining the number of neurons in each layer.
-         */
-        Model(const std::vector<unsigned>& tp) 
-            : thisNetwork(tp), topology(tp)
+        explicit Model (const std::vector<unsigned>& topology)
+            : thisNetwork (topology), topology (topology)
         {
         }
 
-        /**
-         * @brief Get the topology of the network.
-         * 
-         * @return std::vector<unsigned> The topology of the network.
-         */
-        std::vector<unsigned> getTopology() const
+        const std::vector<unsigned>& getTopology() const noexcept
         {
             return topology;
         }
 
-        /**
-         * @brief Get the weights of the network.
-         * 
-         * @return std::vector<double> The weights of the network.
-         */
         std::vector<double> getWeights() const
         {
-            return weights;
+            return thisNetwork.getWeights();
         }
 
-        /**
-         * @brief Get the current activations (output values) of all neurons in the network.
-         * 
-         * @return std::vector<std::vector<double>> A vector of vectors containing activations for each layer.
-         */
         std::vector<std::vector<double>> getActivations() const
         {
             std::vector<std::vector<double>> activations;
-            for (const auto& layer : thisNetwork.layers)
+            activations.reserve (thisNetwork.GetLayers().size());
+
+            for (const auto& layer : thisNetwork.GetLayers())
             {
                 std::vector<double> layerActivations;
+                layerActivations.reserve (layer.size());
+
                 for (const auto& neuron : layer)
                 {
-                    layerActivations.push_back(neuron->getOutputVal());
+                    layerActivations.push_back (neuron->getOutputVal());
                 }
-                activations.push_back(layerActivations);
+
+                activations.push_back (std::move (layerActivations));
             }
+
             return activations;
         }
 
-        /**
-         * @brief Get the recent average error (loss) of the network.
-         * 
-         * @return double The recent average error.
-         */
-        double getRecentAverageError() const
+        double getRecentAverageError() const noexcept
         {
             return thisNetwork.getRecentAverageError();
         }
 
-        /**
-         * @brief Set a new topology for the model.
-         * 
-         * This function allows you to change the network structure after initialization.
-         * However, if you change the topology, you'll need to reinitialize the network with the new topology.
-         * 
-         * @param tp A vector representing the new topology.
-         */
-        void setTopology(const std::vector<unsigned>& tp)
+        void setTopology (const std::vector<unsigned>& newTopology)
         {
-            topology = tp;
-            thisNetwork = Network(tp);  // Reinitialize the network with the new topology
+            Network replacement (newTopology);
+            thisNetwork = std::move (replacement);
+            topology = newTopology;
         }
 
-        /**
-         * @brief Perform backpropagation on the network to update the weights based on target values.
-         * 
-         * @param targetVals The expected output values used for training.
-         */
-        void backPropagate(const std::vector<double>& targetVals)
+        void backPropagate (const std::vector<double>& targetVals)
         {
-            thisNetwork.backPropagate(targetVals);
+            thisNetwork.backPropagate (targetVals);
         }
 
-        /**
-         * @brief Get a pointer to the internal network.
-         * 
-         * This allows you to directly access the Network class for advanced operations if needed.
-         * 
-         * @return Network* A pointer to the internal Network object.
-         */
-        Network* getNetwork()
+        Network* getNetwork() noexcept
         {
             return &thisNetwork;
         }
 
-        /**
-         * @brief Get the current weights of the network.
-         * 
-         * This function retrieves the current weights of the network, which are cached for later use.
-         * 
-         * @return std::vector<double> A vector containing the current weights of the network.
-         */
-        std::vector<double> getWeights()
+        const Network* getNetwork() const noexcept
         {
-            weights = thisNetwork.getWeights();  // Update the cached weights
-            return weights;
+            return &thisNetwork;
         }
 
-        /**
-         * @brief Perform forward propagation through the network with the given inputs.
-         * 
-         * This method processes the input values through the network to calculate the output.
-         * 
-         * @param inputs A vector of input values corresponding to the input layer of the network.
-         */
-        void feedForward (std::vector<double> inputs)
+        void feedForward (const std::vector<double>& inputs)
         {
-            assert (inputs.size() == topology.front());  // Ensure the input size matches the network input layer
             thisNetwork.feedForward (inputs);
         }
 
-        /**
-         * @brief Get the results (output values) from the network.
-         * 
-         * After calling `FeedForward`, use this method to retrieve the calculated outputs.
-         * 
-         * @return std::vector<double> A vector containing the output values from the network.
-         */
         std::vector<double> getResult() const
         {
             std::vector<double> resultVals;
@@ -188,112 +95,81 @@ namespace ML
             return resultVals;
         }
 
-        /**
-         * @brief Set new weights for the network.
-         * 
-         * This function allows you to manually set the weights of the network.
-         * 
-         * @param newWeights A vector containing the new weights to be applied to the network.
-         */
-        void setWeights(const std::vector<double>& newWeights)
+        void setWeights (const std::vector<double>& newWeights)
         {
-            thisNetwork.putWeights(newWeights);
+            thisNetwork.putWeights (newWeights);
         }
 
-        /**
-         * @brief Display the topology of the network.
-         * 
-         * This function prints the number of neurons in each layer of the network to the console.
-         */
         void displayTopology() const
         {
             std::cout << "Network Topology:\n";
-            for (unsigned layerSize : topology)
+            for (const unsigned layerSize : topology)
             {
                 std::cout << layerSize << " neurons\n";
             }
         }
 
-        /**
-         * @brief Update the weights of the network.
-         * 
-         * This function applies updates to the weights based on the training (backpropagation) process.
-         */
         void updateWeights()
         {
             thisNetwork.updateWeights();
         }
 
-        /**
-         * @brief Display the weights of the network.
-         * 
-         * This function prints the current weights of the network to the console.
-         */
         void displayWeights() const
         {
             std::cout << "Network Weights:\n";
-            const std::vector<double>& currentWeights = const_cast<Model*>(this)->getWeights();
-            for (double weight : currentWeights)
+            for (const double weight : getWeights())
             {
-                std::cout << weight << " ";
+                std::cout << weight << ' ';
             }
-            std::cout << "\n";
+            std::cout << '\n';
         }
 
-        /**
-         * @brief Save the network weights to a file.
-         * 
-         * This function writes the current weights of the network to a file for later retrieval.
-         * 
-         * @param filename The name of the file where weights will be saved.
-         */
-        void saveWeightsToFile(const std::string& filename) const
+        void saveWeightsToFile (const std::string& filename) const
         {
-            std::ofstream outFile(filename);
+            std::ofstream outFile (filename, std::ios::trunc);
             if (!outFile)
             {
-                std::cerr << "Error: Unable to open file for saving weights\n";
-                return;
+                throw std::runtime_error ("Unable to open TinyML weight file for writing: " + filename);
             }
 
-            const std::vector<double>& currentWeights = const_cast<Model*>(this)->getWeights();
-            for (double weight : currentWeights)
+            outFile << std::setprecision (std::numeric_limits<double>::max_digits10);
+            for (const double weight : getWeights())
             {
-                outFile << weight << "\n";
+                outFile << weight << '\n';
             }
-            outFile.close();
+
+            if (!outFile)
+            {
+                throw std::runtime_error ("Failed while writing TinyML weight file: " + filename);
+            }
         }
 
-        /**
-         * @brief Load the network weights from a file.
-         * 
-         * This function reads weights from a file and applies them to the network.
-         * 
-         * @param filename The name of the file from which to load weights.
-         */
         void loadWeightsFromFile (const std::string& filename)
         {
-            std::ifstream inFile(filename);
+            std::ifstream inFile (filename);
             if (!inFile)
             {
-                std::cerr << "Error: Unable to open file for loading weights\n";
-                return;
+                throw std::runtime_error ("Unable to open TinyML weight file for reading: " + filename);
             }
 
             std::vector<double> newWeights;
-            double weight;
+            double weight = 0.0;
             while (inFile >> weight)
             {
-                newWeights.push_back(weight);
+                newWeights.push_back (weight);
             }
 
-            if (!newWeights.empty())
+            if (!inFile.eof())
             {
-                setWeights(newWeights);
+                throw std::runtime_error ("TinyML weight file contains invalid data: " + filename);
             }
 
-            inFile.close();
+            setWeights (newWeights);
         }
+
+    private:
+        Network thisNetwork;
+        std::vector<unsigned> topology;
     };
 }
 

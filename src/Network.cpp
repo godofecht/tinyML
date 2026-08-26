@@ -1,66 +1,106 @@
-//****************************************************************************
-/* Copyright (C) Abhishek Shivakumar - All Rights Reserved
- * Unauthorized copying of this file, via any medium is strictly prohibited
- * Proprietary and confidential
- * Written by Abhishek Shivakumar <abhishek.shivakumar@gmail.com>, 22/04/2022
-*****************************************************************************/
+// SPDX-License-Identifier: MIT
+// Copyright (c) Abhishek Shivakumar
 
-#include <ctime> // For time()
-#include <cassert>    // For assert()
 #include "Network.h"
+
+#include <cmath>
+#include <limits>
+#include <stdexcept>
 
 namespace ML
 {
     Network::Network (const std::vector<unsigned>& topology)
     {
-        srand (static_cast<unsigned int>(time (NULL)));
-        unsigned numLayers = static_cast<unsigned>(topology.size());
+        if (topology.size() < 2)
+        {
+            throw std::invalid_argument ("TinyML network topology requires at least input and output layers");
+        }
+
+        for (const unsigned width : topology)
+        {
+            if (width == 0)
+            {
+                throw std::invalid_argument ("TinyML network layers must contain at least one neuron");
+            }
+        }
+
+        const auto numLayers = static_cast<unsigned> (topology.size());
 
         for (unsigned layerNum = 0; layerNum < numLayers; ++layerNum)
         {
             layers.emplace_back();
-            unsigned numOutputs = (layerNum == topology.size() - 1) ? 0 : topology[layerNum + 1];
+            const unsigned numOutputs = layerNum + 1 == numLayers ? 0 : topology[layerNum + 1];
 
-            // Create neurons for this layer, including a bias neuron
             for (unsigned neuronNum = 0; neuronNum <= topology[layerNum]; ++neuronNum)
             {
-                layers.back().push_back(std::make_unique<Neuron>(numOutputs, neuronNum));
+                layers.back().push_back (std::make_unique<Neuron> (numOutputs, neuronNum));
             }
 
-            // Set the bias neuron's output to 0.0
-            layers.back().back()->setOutputVal(0.0);
+            // Every non-output layer uses its final neuron as a conventional bias input.
+            layers.back().back()->setOutputVal (1.0);
         }
     }
 
-    void Network::normalizeWeights (int connection_index)
+    void Network::normalizeWeights (int connectionIndex)
     {
-        double sum_weights_squared = 0.0;
+        if (connectionIndex < 0)
+        {
+            throw std::invalid_argument ("TinyML connection index cannot be negative");
+        }
+
+        const auto index = static_cast<std::size_t> (connectionIndex);
+        double sum = 0.0;
+        std::size_t count = 0;
 
         for (const Layer& layer : layers)
         {
             for (const auto& neuron : layer)
             {
-                sum_weights_squared += neuron->getOutputWeights()[connection_index]->weight;
+                const auto& weights = neuron->getOutputWeights();
+                if (index < weights.size())
+                {
+                    sum += weights[index]->weight;
+                    ++count;
+                }
             }
         }
 
-        double average = sum_weights_squared / 101.0;
-        sum_weights_squared = 0.0;
+        if (count == 0)
+        {
+            throw std::out_of_range ("TinyML connection index does not exist in this network");
+        }
+
+        const double mean = sum / static_cast<double> (count);
+        double squaredNorm = 0.0;
 
         for (const Layer& layer : layers)
         {
             for (const auto& neuron : layer)
             {
-                neuron->getOutputWeights()[connection_index]->weight -= average;
-                sum_weights_squared += std::pow(neuron->getOutputWeights()[connection_index]->weight, 2);
+                auto& weights = neuron->getOutputWeights();
+                if (index < weights.size())
+                {
+                    weights[index]->weight -= mean;
+                    squaredNorm += weights[index]->weight * weights[index]->weight;
+                }
             }
         }
 
+        if (squaredNorm <= std::numeric_limits<double>::epsilon())
+        {
+            return;
+        }
+
+        const double norm = std::sqrt (squaredNorm);
         for (const Layer& layer : layers)
         {
             for (const auto& neuron : layer)
             {
-                neuron->getOutputWeights()[connection_index]->weight /= std::sqrt(sum_weights_squared);
+                auto& weights = neuron->getOutputWeights();
+                if (index < weights.size())
+                {
+                    weights[index]->weight /= norm;
+                }
             }
         }
     }
@@ -69,81 +109,86 @@ namespace ML
     {
         for (std::size_t layerNum = 1; layerNum < layers.size(); ++layerNum)
         {
+            Layer& layer = layers[layerNum];
             Layer& prevLayer = layers[layerNum - 1];
 
-            for (auto& neuron : prevLayer)
+            for (std::size_t neuronNum = 0; neuronNum + 1 < layer.size(); ++neuronNum)
             {
-                neuron->updateInputWeights(prevLayer);
+                layer[neuronNum]->updateInputWeights (prevLayer);
             }
         }
     }
 
     void Network::backPropagate (const std::vector<double>& targetVals)
     {
-        // Calculate overall net error (RMS of output neuron errors)
         Layer& outputLayer = layers.back();
-        error = 0.0;
+        const std::size_t outputCount = outputLayer.size() - 1;
 
-        for (std::size_t n = 0; n < outputLayer.size() - 1; ++n)
+        if (targetVals.size() != outputCount)
         {
-            double delta = targetVals[n] - outputLayer[n]->getOutputVal();
+            throw std::invalid_argument ("TinyML target vector size does not match the output layer");
+        }
+
+        error = 0.0;
+        for (std::size_t n = 0; n < outputCount; ++n)
+        {
+            const double delta = targetVals[n] - outputLayer[n]->getOutputVal();
             error += delta * delta;
         }
 
-        error /= outputLayer.size() - 1;  // Average error squared
-        error = std::sqrt(error);         // RMS
+        error = std::sqrt (error / static_cast<double> (outputCount));
+        recentAverageError = (recentAverageError * recentAverageSmoothingFactor + error)
+                           / (recentAverageSmoothingFactor + 1.0);
 
-        // Implement a recent average measurement
-        recentAverageError = (recentAverageError * recentAverageSmoothingFactor + error) / (recentAverageSmoothingFactor + 1.0);
-
-        // Calculate output layer gradients
-        for (std::size_t n = 0; n < outputLayer.size() - 1; ++n)
+        for (std::size_t n = 0; n < outputCount; ++n)
         {
-            outputLayer[n]->calcOutputGradients(targetVals[n]);
+            outputLayer[n]->calcOutputGradients (targetVals[n]);
         }
 
-        // Calculate hidden layer gradients
         for (std::size_t layerNum = layers.size() - 2; layerNum > 0; --layerNum)
         {
             Layer& hiddenLayer = layers[layerNum];
             Layer& nextLayer = layers[layerNum + 1];
 
-            for (auto& neuron : hiddenLayer)
+            for (std::size_t n = 0; n + 1 < hiddenLayer.size(); ++n)
             {
-                neuron->calcHiddenGradients(nextLayer);
+                hiddenLayer[n]->calcHiddenGradients (nextLayer);
             }
         }
 
-        // Update connection weights for all layers from output to first hidden layer
         for (std::size_t layerNum = layers.size() - 1; layerNum > 0; --layerNum)
         {
             Layer& layer = layers[layerNum];
             Layer& prevLayer = layers[layerNum - 1];
 
-            for (std::size_t n = 0; n < layer.size() - 1; ++n)
+            for (std::size_t n = 0; n + 1 < layer.size(); ++n)
             {
-                layer[n]->updateInputWeights(prevLayer);
+                layer[n]->updateInputWeights (prevLayer);
             }
         }
     }
 
-    void Network::feedForward (std::vector<double> inputVals)
+    void Network::feedForward (const std::vector<double>& inputVals)
     {
-        assert(inputVals.size() == layers[0].size() - 1);
-
-        // Assign input values to input neurons
-        for (std::size_t i = 0; i < inputVals.size(); ++i)
+        const std::size_t expectedInputs = layers.front().size() - 1;
+        if (inputVals.size() != expectedInputs)
         {
-            layers[0][i]->setOutputVal(inputVals[i]);
+            throw std::invalid_argument ("TinyML input vector size does not match the input layer");
         }
 
-        // Forward propagate
+        for (std::size_t i = 0; i < inputVals.size(); ++i)
+        {
+            layers.front()[i]->setOutputVal (inputVals[i]);
+        }
+
         for (std::size_t layerNum = 1; layerNum < layers.size(); ++layerNum)
         {
             Layer& prevLayer = layers[layerNum - 1];
-            for (std::size_t n = 0; n < layers[layerNum].size() - 1; ++n)
+            Layer& layer = layers[layerNum];
+
+            for (std::size_t n = 0; n + 1 < layer.size(); ++n)
             {
-                layers[layerNum][n]->feedForward(prevLayer);
+                layer[n]->feedForward (prevLayer);
             }
         }
     }
@@ -151,12 +196,12 @@ namespace ML
     void Network::getResults (std::vector<double>& resultVals) const
     {
         resultVals.clear();
-        for (const auto& neuron : layers.back())
+        const Layer& outputLayer = layers.back();
+        resultVals.reserve (outputLayer.size() - 1);
+
+        for (std::size_t n = 0; n + 1 < outputLayer.size(); ++n)
         {
-            if (&neuron != &layers.back().back()) // Ignore the bias neuron
-            {
-                resultVals.push_back(neuron->getOutputVal());
-            }
+            resultVals.push_back (outputLayer[n]->getOutputVal());
         }
     }
 
@@ -168,9 +213,9 @@ namespace ML
         {
             for (const auto& neuron : layer)
             {
-                for (const auto& weight : neuron->getOutputWeights())
+                for (const auto& connection : neuron->getOutputWeights())
                 {
-                    weights.push_back(weight->weight);
+                    weights.push_back (connection->weight);
                 }
             }
         }
@@ -180,15 +225,28 @@ namespace ML
 
     void Network::putWeights (const std::vector<double>& weights)
     {
-        std::size_t cWeight = 0;
+        std::size_t expectedCount = 0;
+        for (const Layer& layer : layers)
+        {
+            for (const auto& neuron : layer)
+            {
+                expectedCount += neuron->getOutputWeights().size();
+            }
+        }
 
+        if (weights.size() != expectedCount)
+        {
+            throw std::invalid_argument ("TinyML weight vector size does not match the network topology");
+        }
+
+        std::size_t currentWeight = 0;
         for (Layer& layer : layers)
         {
             for (auto& neuron : layer)
             {
-                for (auto& weight : neuron->getOutputWeights())
+                for (auto& connection : neuron->getOutputWeights())
                 {
-                    weight->weight = weights[cWeight++];
+                    connection->weight = weights[currentWeight++];
                 }
             }
         }
