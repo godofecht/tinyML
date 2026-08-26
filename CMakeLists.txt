@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.20)
 
+if(POLICY CMP0135)
+    cmake_policy(SET CMP0135 NEW)
+endif()
+
 project(
     TinyML
     VERSION 1.0.0
@@ -180,7 +184,14 @@ if(TINYML_BUILD_EXTENDED)
             SOVERSION ${PROJECT_VERSION_MAJOR}
     )
     tinyml_configure_target(TinyML)
-    target_link_libraries(TinyML PUBLIC TinyMLCore ${TINYML_XSIMD_TARGET})
+    target_link_libraries(
+        TinyML
+        PUBLIC
+            $<BUILD_INTERFACE:TinyMLCore>
+            $<INSTALL_INTERFACE:TinyML::Core>
+            $<BUILD_INTERFACE:${TINYML_XSIMD_TARGET}>
+            $<INSTALL_INTERFACE:xsimd>
+    )
 
     if(UNIX AND NOT APPLE)
         target_link_libraries(TinyML PRIVATE m)
