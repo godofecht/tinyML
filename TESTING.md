@@ -1,95 +1,85 @@
 # Testing & CI Policy
 
-## What runs in CI
+## Release gates
 
-CI runs on **pull requests to `main`**, **pushes to `main`** and **release tags** (`v*`).
-Only fast unit tests execute in CI — the full suite finishes in under 2 minutes.
+CI runs on pull requests to `main`, pushes to `main` and version tags. The build matrix contains a dependency-free core configuration plus full GCC and Clang configurations.
 
-```
-ctest --output-on-failure --timeout 120
-```
+Every matrix entry performs four distinct checks: configure/build, CTest correctness tests, `cmake --install`, and a fresh downstream consumer build using `find_package(TinyML CONFIG REQUIRED COMPONENTS Core)`. This catches packaging/export errors that an in-tree build cannot detect.
 
-## What does NOT run in CI (and why)
-
-### Benchmarks (removed from ctest)
-
-| Benchmark | Why skipped |
-|---|---|
-| `SIMDBenchmark` | Benchmark results on shared CI runners are meaningless — hardware varies per run |
-| `AttentionBenchmark` | Same reason — timing-sensitive, needs dedicated hardware |
-| `SimpleAttentionBenchmark` | Same reason |
-| `ReinforcementLearningBenchmark` | Segfaults on Linux CI runners (works locally on macOS) |
-| `GenerativeModelsBenchmark` | Benchmark — not a correctness test |
-
-**Benchmarks are still built** so compilation is verified. They just aren't registered
-with `add_test()` so `ctest` won't run them. Run them locally:
+Core-only verification:
 
 ```bash
-cd build
-./bin/SIMDBenchmark
-./bin/AttentionBenchmark
-./bin/SimpleAttentionBenchmark
-./bin/ReinforcementLearningBenchmark
-./bin/GenerativeModelsBenchmark
+cmake -S . -B build-core -G Ninja \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DTINYML_BUILD_EXTENDED=OFF
+cmake --build build-core --parallel
+ctest --test-dir build-core --output-on-failure
 ```
 
-### Timing assertions (skipped unless asked for)
-
-Five tests assert wall-clock thresholds:
-
-| Test | Asserts |
-|---|---|
-| `Phase1SIMDTest.PerformanceTargetsValidation` | per-op time against a target in µs |
-| `Phase6ProductionTest.ProductionPerformanceBenchmarks` | audio, time series, vision and text latency |
-| `Phase6ProductionTest.ProductionDeploymentScenarios` | speech, IoT, edge and device-text latency |
-| `Phase4SimpleTest.StreamingSimulation` | jitter, as max/min per-token time |
-| `Phase7AdvancedAttentionTest.PerformanceBenchmarks` | attention latency and throughput |
-
-On a shared runner these measure the runner. The correctness assertions in the
-same tests always run; the timing ones are opt-in:
+Full verification:
 
 ```bash
-TINYML_PERF_ASSERTS=1 ctest --output-on-failure
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel
+ctest --test-dir build --output-on-failure --timeout 120
 ```
 
-The measured numbers print either way. The current targets do not hold on a
-GitHub runner, and `Phase7AdvancedAttentionTest` throughput sits near its 25
-tok/s line even on a loaded laptop, so treat them as goals rather than facts.
-
-### Disabled tests (registered but skipped)
-
-| Test | Why disabled |
-|---|---|
-| `Phase8PhysicsInformedTest` | Takes **16+ minutes** on CI runners — too slow for free GitHub Actions |
-| `Phase8PhysicsComprehensiveTest` | Non-deterministic convergence — `loss_ratio` swings from 0.04 to 21+ across runs |
-| `Phase12ReinforcementTest` | Segfaults on Linux CI runners |
-
-Run these locally if you need them:
+Installed-consumer verification:
 
 ```bash
-cd build
-ctest -R Phase8PhysicsInformedTest --force-new-ctest-process
-ctest -R Phase12ReinforcementTest --force-new-ctest-process
+cmake --install build --prefix "$PWD/install"
+cmake -S tests/install_consumer -B consumer-build -G Ninja \
+  -DCMAKE_PREFIX_PATH="$PWD/install"
+cmake --build consumer-build
+ctest --test-dir build --output-on-failure
+./consumer-build/tinyml_install_consumer
 ```
+
+## Performance assertions
+
+Wall-clock thresholds are not release correctness gates on shared CI hardware. The tests still print measured timings, while assertions are enabled locally with:
+
+```bash
+TINYML_PERF_ASSERTS=1 ctest --test-dir build --output-on-failure
+```
+
+## Benchmarks
+
+Benchmarks are excluded from normal builds and from CTest. Enable the supported benchmark targets explicitly:
+
+```bash
+cmake -S . -B build-bench \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DTINYML_BUILD_TESTS=OFF \
+  -DTINYML_BUILD_BENCHMARKS=ON
+cmake --build build-bench --parallel
+```
+
+Benchmark numbers should be recorded with compiler, flags, CPU, operating system, power mode and dataset/input shape. Results from an unspecified shared runner are not suitable for performance claims.
+
+## Registered disabled tests
+
+The following tests remain compiled but disabled in the default CTest run:
+
+| Test | Status |
+| --- | --- |
+| `Phase8PhysicsInformedTest` | Long-running experiment; unsuitable for the fast release gate |
+| `Phase8PhysicsComprehensiveTest` | Non-deterministic convergence; requires a deterministic acceptance criterion |
+| `Phase12ReinforcementTest` | Known Linux failure; module remains preview until fixed |
+
+A module with a known-failure test cannot graduate to the stable API surface.
+
+Run an individual disabled test locally with CTest's disabled-test override, for example:
+
+```bash
+ctest --test-dir build -R Phase12ReinforcementTest \
+  --output-on-failure --force-new-ctest-process
+```
+
+## Sanitizers and dedicated performance hardware
+
+Sanitizer runs and dedicated-hardware performance baselines are appropriate release-hardening checks, but they are intentionally separate from the current fast CI matrix. They should be added only when the corresponding test corpus is deterministic enough that a failure represents a code defect rather than runner variance.
 
 ## Releases
 
-Pushing a version tag (e.g. `git tag v1.0.0 && git push --tags`) triggers:
-
-1. Full build + unit tests
-2. Release binary packaging (`libTinyML.a` + executables)
-3. Upload to GitHub Releases
-
-## Running the full suite locally
-
-```bash
-mkdir -p build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-cmake --build . -j$(nproc)
-
-# Fast unit tests only (what CI runs)
-ctest --output-on-failure --timeout 120
-
-# Everything including disabled tests
-ctest --output-on-failure --timeout 1200 --force-new-ctest-process
-```
+A `v*` tag is packaged from the CMake install graph. The release job produces separate core and extended archives and SHA-256 checksums. The core archive contains no xsimd dependency. The extended package records xsimd as a CMake dependency rather than vendoring it into the TinyML SDK.

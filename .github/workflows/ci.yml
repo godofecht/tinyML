@@ -17,27 +17,34 @@ concurrency:
 
 jobs:
   build-and-test:
-    name: ${{ matrix.compiler }} / ${{ matrix.build_type }}
+    name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          - compiler: GCC
+          - name: Core / GCC / Release
             cc: gcc
             cxx: g++
             build_type: Release
-          - compiler: Clang
+            extended: 'OFF'
+          - name: Extended / GCC / Release
+            cc: gcc
+            cxx: g++
+            build_type: Release
+            extended: 'ON'
+          - name: Extended / Clang / Debug
             cc: clang
             cxx: clang++
             build_type: Debug
+            extended: 'ON'
     env:
       CC: ${{ matrix.cc }}
       CXX: ${{ matrix.cxx }}
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install build tools
         run: |
@@ -45,13 +52,28 @@ jobs:
           sudo apt-get install -y ninja-build
 
       - name: Configure
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DTINYML_BUILD_EXTENDED=${{ matrix.extended }} \
+            -DTINYML_BUILD_TESTS=ON
 
       - name: Build
         run: cmake --build build --parallel 2
 
       - name: Test
         run: ctest --test-dir build --output-on-failure --timeout 120
+
+      - name: Install package
+        run: cmake --install build --prefix "$PWD/install"
+
+      - name: Downstream package smoke test
+        run: |
+          cmake -S tests/install_consumer -B consumer-build -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DCMAKE_PREFIX_PATH="$PWD/install"
+          cmake --build consumer-build --parallel 2
+          ./consumer-build/tinyml_install_consumer
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')
@@ -62,31 +84,49 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install build tools
         run: |
           sudo apt-get update
           sudo apt-get install -y ninja-build
 
-      - name: Configure
-        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-
-      - name: Build
-        run: cmake --build build --parallel 2
-
-      - name: Package
+      - name: Build and stage core package
         run: |
-          package_dir="tinyml-${{ github.ref_name }}-linux-x86_64"
-          mkdir -p "$package_dir/lib" "$package_dir/include"
-          cp build/libTinyML.a "$package_dir/lib/"
-          cp -R include/. "$package_dir/include/"
-          cp README.md LICENSE LICENSE-COMMERCIAL.md LICENSING.md "$package_dir/"
-          tar -czf "$package_dir.tar.gz" "$package_dir"
-          tar -tzf "$package_dir.tar.gz" | head -80
+          core_dir="tinyml-${{ github.ref_name }}-core-linux-x86_64"
+          cmake -S . -B build-core -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DTINYML_BUILD_EXTENDED=OFF \
+            -DTINYML_BUILD_TESTS=OFF
+          cmake --build build-core --parallel 2
+          cmake --install build-core --prefix "$PWD/$core_dir"
+          tar -czf "$core_dir.tar.gz" "$core_dir"
+
+      - name: Build and stage extended package
+        run: |
+          extended_dir="tinyml-${{ github.ref_name }}-extended-linux-x86_64"
+          cmake -S . -B build-extended -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DTINYML_BUILD_EXTENDED=ON \
+            -DTINYML_BUILD_TESTS=OFF
+          cmake --build build-extended --parallel 2
+          cmake --install build-extended --prefix "$PWD/$extended_dir"
+          tar -czf "$extended_dir.tar.gz" "$extended_dir"
+
+      - name: Create checksums
+        run: sha256sum tinyml-${{ github.ref_name }}-*.tar.gz > SHA256SUMS
+
+      - name: Inspect packages
+        run: |
+          cat SHA256SUMS
+          tar -tzf tinyml-${{ github.ref_name }}-core-linux-x86_64.tar.gz | head -80
+          tar -tzf tinyml-${{ github.ref_name }}-extended-linux-x86_64.tar.gz | head -80
 
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          files: tinyml-${{ github.ref_name }}-linux-x86_64.tar.gz
+          files: |
+            tinyml-${{ github.ref_name }}-core-linux-x86_64.tar.gz
+            tinyml-${{ github.ref_name }}-extended-linux-x86_64.tar.gz
+            SHA256SUMS
           generate_release_notes: true
