@@ -1,57 +1,33 @@
 # Licensing
 
-tinyML is split in two. The core is MIT. The extended model library is
-commercial. The split follows the dependency graph, so it is enforceable by
-inspection: no MIT header includes a commercial one.
+tinyML uses a mixed-license repository. Licensing and API stability are separate concepts: [docs/STABILITY.md](docs/STABILITY.md) defines what is supported and installed, while this document defines the license that applies to source files.
 
-## MIT core
+## MIT-licensed code
 
-Zero third-party dependencies. Compiler intrinsics (`<immintrin.h>`,
-`<arm_neon.h>`) only. Free for any use, including commercial, under
-[LICENSE](LICENSE).
+The following files are licensed under [LICENSE](LICENSE), including commercial use under the terms of the MIT License:
 
-| Header | |
-| --- | --- |
-| `include/common.h` | Shared types and helpers |
-| `include/logger.h` | Logging |
-| `include/NN.h` | Neural network primitives |
-| `include/Network.h` | Network composition |
-| `include/Model.h` | Model container |
-| `include/Perceptron.h` | Perceptron |
-| `include/VectorOperations.h` | Vector maths |
-| `include/VectorStatistics.h` | Statistical analysis |
-| `include/SIMDOperations.h` | SSE/AVX paths |
-| `include/NEONOperations.h` | ARM NEON paths |
-| `include/QuantizedOperations.h` | Quantised arithmetic |
-| `include/AdvancedOptimizations.h` | Optimiser implementations |
-| `include/BayesianNeuralNetwork.h` | Bayesian networks |
-| `include/TinyMLAPI.h` | Public API surface |
+`include/common.h`, `include/logger.h`, `include/NN.h`, `include/Network.h`, `include/Model.h`, `include/Perceptron.h`, `include/VectorOperations.h`, `include/VectorStatistics.h`, `include/SIMDOperations.h`, `include/NEONOperations.h`, `include/QuantizedOperations.h`, `include/AdvancedOptimizations.h`, `include/BayesianNeuralNetwork.h`, `include/TinyMLAPI.h` and their corresponding MIT implementation files where present.
 
-## Commercial
+The supported `TinyML::Core` distribution deliberately contains only a smaller stable subset: `NN.h`, `Network.h`, `Model.h`, `src/NN.cpp` and `src/Network.cpp`, plus the generated/version umbrella headers. A core-only build does not discover, fetch, link or expose xsimd.
 
-Requires [xsimd](https://github.com/xtensor-stack/xsimd) (BSD-3-Clause).
-Covered by [LICENSE-COMMERCIAL.md](LICENSE-COMMERCIAL.md). Free for research,
-education and personal projects. Commercial use requires a paid licence.
+Some historical files contain older copyright banners. Copyright ownership is compatible with an open-source license grant; for files explicitly identified as MIT in this document, [LICENSE](LICENSE) is the repository's license grant for that code.
 
-| Header | |
-| --- | --- |
-| `include/XSIMDOperations.h` | xsimd backend, the root of this tier |
-| `include/AdvancedAttention.h` | Attention variants |
-| `include/LightweightAttention.h` | Reduced-cost attention |
-| `include/RealTimeTransformer.h` | Streaming transformer |
-| `include/DynamicNeuralNetwork.h` | Dynamic topology networks |
-| `include/GenerativeModels.h` | Generative models |
-| `include/GraphNeuralNetwork.h` | Graph networks |
-| `include/PhysicsInformedNN.h` | Physics-informed networks |
-| `include/ReinforcementLearning.h` | RL agents |
-| `include/TimeSeriesForecasting.h` | Forecasting |
-| `include/ProductionAPI.h` | Production deployment API |
+## Commercially licensed code
 
-## Why the split falls here
+The following modules are covered by [LICENSE-COMMERCIAL.md](LICENSE-COMMERCIAL.md):
 
-Commercial headers may include MIT headers. MIT headers include nothing from
-the commercial tier. That means the MIT core compiles and ships on its own,
-with no third-party dependency and no licence entanglement.
+`include/XSIMDOperations.h`, `include/AdvancedAttention.h`, `include/LightweightAttention.h`, `include/RealTimeTransformer.h`, `include/DynamicNeuralNetwork.h`, `include/GenerativeModels.h`, `include/GraphNeuralNetwork.h`, `include/PhysicsInformedNN.h`, `include/ReinforcementLearning.h`, `include/TimeSeriesForecasting.h`, `include/ProductionAPI.h` and their corresponding implementation files.
 
-To build core-only, exclude the commercial headers from your include path.
-They are not referenced by anything in the core.
+The `TinyML::Extended` target combines these modules with MIT-licensed support code. Linking MIT code into the extended target does not relicense that MIT code, but use of the commercially licensed modules remains subject to the commercial license.
+
+`TinyMLAPI.h` itself remains MIT licensed, but its current implementation is intentionally part of `TinyML::Extended` because it instantiates extended model types. It is therefore not part of the zero-dependency core artifact.
+
+## Third-party dependency
+
+The extended target uses [xsimd](https://github.com/xtensor-stack/xsimd), which is distributed under the BSD 3-Clause License. Core-only builds do not require xsimd.
+
+## Distribution boundary
+
+The build graph enforces the distribution boundary. `TINYML_BUILD_EXTENDED=OFF` creates and installs only the MIT core target and stable core headers. Enabling the extended build creates a separate `TinyML::Extended` target and extended install export.
+
+The release archives mirror that boundary: the core archive is dependency-free; the extended archive requires an xsimd package when consumed through CMake.
