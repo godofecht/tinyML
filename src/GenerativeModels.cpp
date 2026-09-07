@@ -319,7 +319,7 @@ void VAE::decoder_forward(const LatentVector& latent, const Tensor& condition,
     for (size_t i = 0; i < config_.input_dim; ++i) {
         float sum = decoder_b2_[i];
         for (size_t j = 0; j < config_.hidden_dim; ++j) {
-            sum += hidden[j] * decoder_w2_[j * config_.hidden_dim + i];
+            sum += hidden[j] * decoder_w2_[j * config_.input_dim + i];
         }
         output[i] = std::tanh(sum);
     }
@@ -394,7 +394,7 @@ std::vector<Tensor> VAE::get_activations(const Tensor& input) {
     for (size_t i = 0; i < config_.input_dim; ++i) {
         float sum = decoder_b2_[i];
         for (size_t j = 0; j < config_.hidden_dim; ++j) {
-            sum += dec_hidden[j] * decoder_w2_[j * config_.hidden_dim + i];
+            sum += dec_hidden[j] * decoder_w2_[j * config_.input_dim + i];
         }
         output[i] = std::tanh(sum);
     }
@@ -427,7 +427,7 @@ std::vector<Tensor> VAE::get_decoder_activations(const LatentVector& latent) {
     for (size_t i = 0; i < config_.input_dim; ++i) {
         float sum = decoder_b2_[i];
         for (size_t j = 0; j < config_.hidden_dim; ++j) {
-            sum += dec_hidden[j] * decoder_w2_[j * config_.hidden_dim + i];
+            sum += dec_hidden[j] * decoder_w2_[j * config_.input_dim + i];
         }
         output[i] = std::tanh(sum);
     }
@@ -589,7 +589,7 @@ void GAN::generator_forward(const Tensor& noise, const Tensor& condition, Tensor
     for (size_t i = 0; i < config_.input_dim; ++i) {
         float sum = gen_b3_[i];
         for (size_t j = 0; j < config_.hidden_dim; ++j) {
-            sum += hidden2[j] * gen_w3_[j * config_.hidden_dim + i];
+            sum += hidden2[j] * gen_w3_[j * config_.input_dim + i];
         }
         output[i] = std::tanh(sum);
     }
@@ -836,7 +836,7 @@ void DiffusionModel::unet_forward(const Tensor& xt, const Tensor& time_emb,
     for (size_t i = 0; i < config_.input_dim; ++i) {
         float sum = noise_b3_[i];
         for (size_t j = 0; j < config_.hidden_dim; ++j) {
-            sum += hidden2[j] * noise_w3_[j * config_.hidden_dim + i];
+            sum += hidden2[j] * noise_w3_[j * config_.input_dim + i];
         }
         epsilon_pred[i] = sum;
     }
@@ -861,7 +861,6 @@ void DiffusionModel::forward_diffusion(const Tensor& x0, int t, Tensor& xt, Tens
 void DiffusionModel::predict_noise(const Tensor& xt, int t, const Tensor& condition, Tensor& epsilon_pred) {
     Tensor time_emb;
     time_embedding(t, time_emb);
-    
     unet_forward(xt, time_emb, condition, epsilon_pred);
 }
 
