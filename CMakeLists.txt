@@ -287,7 +287,7 @@ if(TINYML_BUILD_BENCHMARKS)
     add_executable(AttentionBenchmark benchmarks/benchmark_attention.cpp)
     target_link_libraries(AttentionBenchmark PRIVATE TinyML GTest::gtest_main)
 
-    add_executable(SimpleAttentionBenchmark benchmarks/benchmark_simple.cpp)
+    add_executable(SimpleAttentionBenchmark benchmarks/benchmark_simple_attention.cpp)
     target_include_directories(SimpleAttentionBenchmark PRIVATE ${PROJECT_SOURCE_DIR}/include)
     target_compile_features(SimpleAttentionBenchmark PRIVATE cxx_std_17)
 
