@@ -138,7 +138,7 @@ if(TINYML_BUILD_EXTENDED)
         endif()
 
         include(FetchContent)
-        set(XSIMD_SKIP_INSTALL ON CACHE BOOL "" FORCE)
+        set(XSIMD_SKIP_INSTALL OFF CACHE BOOL "" FORCE)
         FetchContent_Declare(
             xsimd
             URL https://github.com/xtensor-stack/xsimd/archive/refs/tags/12.1.1.tar.gz
@@ -287,7 +287,7 @@ if(TINYML_BUILD_BENCHMARKS)
     add_executable(AttentionBenchmark benchmarks/benchmark_attention.cpp)
     target_link_libraries(AttentionBenchmark PRIVATE TinyML GTest::gtest_main)
 
-    add_executable(SimpleAttentionBenchmark benchmarks/benchmark_simple_attention.cpp)
+    add_executable(SimpleAttentionBenchmark benchmarks/benchmark_simple.cpp)
     target_include_directories(SimpleAttentionBenchmark PRIVATE ${PROJECT_SOURCE_DIR}/include)
     target_compile_features(SimpleAttentionBenchmark PRIVATE cxx_std_17)
 
