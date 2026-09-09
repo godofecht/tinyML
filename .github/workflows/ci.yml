@@ -123,7 +123,7 @@ jobs:
           tar -tzf tinyml-${{ github.ref_name }}-extended-linux-x86_64.tar.gz | head -80
 
       - name: Publish GitHub release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             tinyml-${{ github.ref_name }}-core-linux-x86_64.tar.gz
