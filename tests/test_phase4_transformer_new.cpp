@@ -1,7 +1,7 @@
 //****************************************************************************
 /* Copyright (C) Abhishek Shivakumar - All Rights Reserved
  * Phase 4: Real-Time Transformer Tests
- * Written by Abhishek Shivakumar <abhishek.shivakumar@gmail.com>, 22/04/2022
+ * Written by Abhishek Shivakumar, 22/04/2022
 *****************************************************************************/
 
 #include <gtest/gtest.h>

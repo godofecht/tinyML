@@ -1,7 +1,7 @@
 //****************************************************************************
 /* Copyright (C) Abhishek Shivakumar - All Rights Reserved
  * Dynamic Neural Systems - Phase 3 Implementation
- * Written by Abhishek Shivakumar <abhishek.shivakumar@gmail.com>, 22/04/2022
+ * Written by Abhishek Shivakumar, 22/04/2022
 *****************************************************************************/
 
 #ifndef DYNAMIC_NEURAL_NETWORK_H

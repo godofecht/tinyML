@@ -1,7 +1,7 @@
 //****************************************************************************
 /* Copyright (C) Abhishek Shivakumar - All Rights Reserved
  * Time Series Forecasting Models for Real-Time Systems
- * Written by Abhishek Shivakumar <abhishek.shivakumar@gmail.com>, 21/01/2026
+ * Written by Abhishek Shivakumar, 21/01/2026
 *****************************************************************************/
 
 #ifndef TIME_SERIES_FORECASTING_H

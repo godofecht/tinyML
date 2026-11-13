@@ -1,7 +1,7 @@
 //****************************************************************************
 /* Copyright (C) Abhishek Shivakumar - All Rights Reserved
  * Phase 13: Time Series Forecasting Tests
- * Written by Abhishek Shivakumar <abhishek.shivakumar@gmail.com>, 21/01/2026
+ * Written by Abhishek Shivakumar, 21/01/2026
 *****************************************************************************/
 
 #include "TimeSeriesForecasting.h"

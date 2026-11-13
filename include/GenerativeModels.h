@@ -1,7 +1,7 @@
 //****************************************************************************
 /* Copyright (C) Abhishek Shivakumar - All Rights Reserved
  * Generative Models for TinyML - VAE, GAN, Diffusion, Flows, Autoregressive
- * Written by Abhishek Shivakumar <abhishek.shivakumar@gmail.com>, 21/01/2026
+ * Written by Abhishek Shivakumar, 21/01/2026
 *****************************************************************************/
 
 #ifndef GENERATIVE_MODELS_H

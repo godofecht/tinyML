@@ -1,7 +1,7 @@
 //****************************************************************************
 /* Copyright (C) Abhishek Shivakumar - All Rights Reserved
  * Real-Time Transformer Architecture for Edge AI
- * Written by Abhishek Shivakumar <abhishek.shivakumar@gmail.com>, 22/04/2022
+ * Written by Abhishek Shivakumar, 22/04/2022
 *****************************************************************************/
 
 #ifndef REALTIME_TRANSFORMER_H

@@ -1,7 +1,7 @@
 //****************************************************************************
 /* Copyright (C) Abhishek Shivakumar - All Rights Reserved
  * ARM NEON SIMD Operations for Mobile Devices
- * Written by Abhishek Shivakumar <abhishek.shivakumar@gmail.com>, 22/04/2022
+ * Written by Abhishek Shivakumar, 22/04/2022
 *****************************************************************************/
 
 #ifndef NEON_OPERATIONS_H

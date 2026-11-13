@@ -1,7 +1,7 @@
 //****************************************************************************
 /* Copyright (C) Abhishek Shivakumar - All Rights Reserved
  * Spatiotemporal & Graph Neural Networks Framework
- * Written by Abhishek Shivakumar <abhishek.shivakumar@gmail.com>, 2025
+ * Written by Abhishek Shivakumar, 2025
 *****************************************************************************/
 
 #ifndef GRAPH_NEURAL_NETWORK_H

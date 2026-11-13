@@ -1,7 +1,7 @@
 //****************************************************************************
 /* Copyright (C) Abhishek Shivakumar - All Rights Reserved
  * Test Suite for Spatiotemporal & Graph Neural Networks
- * Written by Abhishek Shivakumar <abhishek.shivakumar@gmail.com>, 2025
+ * Written by Abhishek Shivakumar, 2025
 *****************************************************************************/
 
 #include "GraphNeuralNetwork.h"
