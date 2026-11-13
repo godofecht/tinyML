@@ -1,9 +1,6 @@
-//****************************************************************************
-/* Copyright (C) Abhishek Shivakumar - All Rights Reserved
- * Unauthorized copying of this file, via any medium is strictly prohibited
- * Proprietary and confidential
- * Written by Abhishek Shivakumar <abhishek.shivakumar@gmail.com>, 22/04/2022
-*****************************************************************************/
+// Copyright (c) Abhishek Shivakumar
+// Example program for the tinyML production API.
+// LICENSING.md sets out which licence covers each file in this repository.
 
 #include "TinyMLAPI.h"
 #include <iostream>
