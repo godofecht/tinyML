@@ -101,7 +101,11 @@ TEST_F(Phase7AdvancedAttentionTest, MultiModalAttention) {
         multi_modal_attention->add_modality(sensor_config);
         
         auto output_with_sensor = attention->forward(test_input);
-        EXPECT_GT(output_with_sensor.size(), output.size()) << "Output should be larger with new modality";
+        ASSERT_EQ(output_with_sensor.size(), output.size() + sensor_config.embed_dim);
+        for (size_t i = output.size(); i < output_with_sensor.size(); ++i)
+            EXPECT_FLOAT_EQ(output_with_sensor[i], 0.0f);
+        multi_modal_attention->remove_modality(ML::Advanced::ModalityType::SENSOR);
+        EXPECT_EQ(attention->forward(test_input).size(), output.size());
     }
     
     std::cout << "Multi-modal attention: PASS\n";

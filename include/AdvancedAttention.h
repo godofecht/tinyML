@@ -118,10 +118,6 @@ public:
     
 private:
     std::map<ModalityType, ModalityConfig> modality_configs_;
-    std::vector<std::unique_ptr<ML::XSIMD::XSIMDVector>> modality_embeddings_;
-    std::vector<float> modality_weights_;
-    
-    std::vector<float> fuse_modalities(const std::vector<std::vector<float>>& modality_inputs);
     std::vector<float> cross_modal_attention(const std::vector<float>& modality_a,
                                            const std::vector<float>& modality_b);
 };
