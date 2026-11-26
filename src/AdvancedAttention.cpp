@@ -715,13 +715,7 @@ std::vector<float> LinearAttention::apply_feature_map(const std::vector<float>& 
     size_t embed_dim = config_.embed_dim;
     size_t feature_dim = linear_config_.feature_dim;
     if (embed_dim == 0 || feature_dim == 0 || input.empty()) return {};
-    size_t seq_len = (embed_dim > 0 && input.size() % embed_dim == 0)
-        ? (input.size() / embed_dim)
-        : 1;
-
-    if (seq_len == 1 && input.size() != embed_dim) {
-        seq_len = 1;
-    }
+    const size_t seq_len = std::max(size_t{1}, input.size() / embed_dim);
 
     std::vector<float> feature_mapped(seq_len * feature_dim, 0.0f);
 

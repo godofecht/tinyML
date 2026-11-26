@@ -330,6 +330,25 @@ TEST_F(Phase7AdvancedAttentionTest, LocalAttention) {
     std::cout << "Local attention: PASS\n";
 }
 
+// A configured sequence length is a capacity, not a guarantee that every
+// input contains that many complete tokens.
+TEST_F(Phase7AdvancedAttentionTest, ShortSequenceAttention) {
+    ML::Advanced::AdvancedAttention::Config config;
+    config.embed_dim = embed_dim;
+    config.seq_len = seq_len;
+    for (auto type : {ML::Advanced::AttentionType::SPARSE,
+                      ML::Advanced::AttentionType::LINEAR,
+                      ML::Advanced::AttentionType::LOCAL}) {
+        auto attention = ML::Advanced::AdvancedAttentionFactory::create_attention(type, config);
+        EXPECT_EQ(attention->forward(test_input).size(), embed_dim);
+        std::vector<float> two_tokens(2 * embed_dim + 1, 0.25f);
+        auto result = attention->forward(two_tokens, two_tokens, two_tokens);
+        ASSERT_EQ(result.size(), 2 * embed_dim);
+        for (float value : result)
+            EXPECT_TRUE(std::isfinite(value));
+    }
+}
+
 // Test Advanced Transformer Block
 TEST_F(Phase7AdvancedAttentionTest, AdvancedTransformerBlock) {
     std::cout << "\n=== Advanced Transformer Block Test ===\n";
