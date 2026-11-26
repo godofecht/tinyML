@@ -38,10 +38,20 @@ def main():
             value = mb.tanh(x=value, name="output" if index == len(layers) - 1 else f"tanh_{index}")
         return value
 
-    model = ct.convert(program, convert_to="mlprogram",
+    program.functions["main"].set_output_types([ct.TensorType(name="output", dtype=np.float32)])
+    model = ct.convert(program, source="milinternal", convert_to="mlprogram",
                        minimum_deployment_target=ct.target.macOS13,
                        compute_precision=ct.precision.FLOAT16,
-                       outputs=[ct.TensorType(name="output", dtype=np.float32)])
+                       inputs=[ct.TensorType(name="input", shape=(1, args.topology[0]), dtype=np.float32)],
+                       skip_model_load=True)
+    spec = model.get_spec()
+    for features, name, width in ((spec.description.input, "input", args.topology[0]),
+                                  (spec.description.output, "output", args.topology[-1])):
+        if len(features) != 1 or features[0].name != name:
+            raise RuntimeError(f"Unexpected Core ML feature name: expected {name}")
+        array = features[0].type.multiArrayType
+        if list(array.shape) != [1, width] or array.dataType != ct.proto.FeatureTypes_pb2.ArrayFeatureType.FLOAT32:
+            raise RuntimeError(f"Unexpected Core ML feature shape or type: {name}")
     model.save(str(args.output))
 
 
