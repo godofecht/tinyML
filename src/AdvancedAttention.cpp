@@ -78,108 +78,50 @@ std::vector<float> AdvancedAttention::causal_mask(const std::vector<float>& inpu
 }
 
 // MultiModalAttention implementation
-MultiModalAttention::MultiModalAttention(const Config& config, 
+MultiModalAttention::MultiModalAttention(const Config& config,
                                         const std::vector<ModalityConfig>& modality_configs)
     : AdvancedAttention(config) {
-    
-    for (const auto& mod_config : modality_configs) {
-        modality_configs_[mod_config.type] = mod_config;
-        modality_weights_.push_back(mod_config.weight);
-        
-        // Create embedding vectors for each modality
-        auto embedding = std::make_unique<ML::XSIMD::XSIMDVector>(mod_config.embed_dim);
-        modality_embeddings_.push_back(std::move(embedding));
-    }
-    
-    // Normalize weights
-    float sum = std::accumulate(modality_weights_.begin(), modality_weights_.end(), 0.0f);
-    for (auto& weight : modality_weights_) {
-        weight /= sum;
-    }
+    for (const auto& modality : modality_configs)
+        add_modality(modality);
 }
 
 std::vector<float> MultiModalAttention::forward(const std::vector<float>& query,
                                                 const std::vector<float>& key,
                                                 const std::vector<float>& value) {
-    
-    // For simplicity, implement as weighted combination of modalities
-    // In a full implementation, this would be more sophisticated
-    size_t total_dim = 0;
-    for (const auto& [type, config] : modality_configs_) {
-        total_dim += config.embed_dim;
-    }
-    
-    std::vector<float> fused_output(total_dim);
-    size_t offset = 0;
-    
-    for (size_t i = 0; i < modality_weights_.size(); ++i) {
-        size_t mod_dim = modality_embeddings_[i]->size();
-        
-        // Simple projection and weighting
-        for (size_t j = 0; j < mod_dim; ++j) {
-            fused_output[offset + j] = query[j % query.size()] * modality_weights_[i];
-        }
-        
-        offset += mod_dim;
-    }
-    
-    return fused_output;
+    return forward(query);
 }
 
 std::vector<float> MultiModalAttention::forward(const std::vector<float>& input) {
-    // Split input by modality and process each
-    std::vector<std::vector<float>> modality_inputs;
-    size_t offset = 0;
-    
+    size_t total_dim = 0;
+    float total_weight = 0.0f;
     for (const auto& [type, config] : modality_configs_) {
-        std::vector<float> mod_input(config.embed_dim);
-        for (size_t i = 0; i < config.embed_dim; ++i) {
-            mod_input[i] = input[offset + i];
-        }
-        modality_inputs.push_back(mod_input);
+        total_dim += config.embed_dim;
+        total_weight += config.weight;
+    }
+    std::vector<float> output(total_dim, 0.0f);
+    size_t offset = 0;
+    for (const auto& [type, config] : modality_configs_) {
+        const float weight = total_weight > 0.0f ? config.weight / total_weight : 0.0f;
+        // Missing modality features contribute zero, including newly added modalities.
+        for (size_t i = 0; i < config.embed_dim && offset + i < input.size(); ++i)
+            output[offset + i] = input[offset + i] * weight;
         offset += config.embed_dim;
     }
-    
-    return fuse_modalities(modality_inputs);
+    return output;
 }
 
 void MultiModalAttention::add_modality(const ModalityConfig& modality) {
     modality_configs_[modality.type] = modality;
-    modality_weights_.push_back(modality.weight);
-    
-    auto embedding = std::make_unique<ML::XSIMD::XSIMDVector>(modality.embed_dim);
-    modality_embeddings_.push_back(std::move(embedding));
-    
-    // Renormalize weights
-    float sum = std::accumulate(modality_weights_.begin(), modality_weights_.end(), 0.0f);
-    for (auto& weight : modality_weights_) {
-        weight /= sum;
-    }
 }
 
 void MultiModalAttention::remove_modality(ModalityType type) {
     modality_configs_.erase(type);
-    // Note: In a full implementation, would need to remove corresponding weights and embeddings
 }
 
 void MultiModalAttention::set_modality_weight(ModalityType type, float weight) {
-    if (modality_configs_.count(type)) {
-        // Find and update weight
-        size_t index = 0;
-        for (const auto& [t, config] : modality_configs_) {
-            if (t == type) {
-                modality_weights_[index] = weight;
-                break;
-            }
-            index++;
-        }
-        
-        // Renormalize
-        float sum = std::accumulate(modality_weights_.begin(), modality_weights_.end(), 0.0f);
-        for (auto& w : modality_weights_) {
-            w /= sum;
-        }
-    }
+    auto it = modality_configs_.find(type);
+    if (it != modality_configs_.end())
+        it->second.weight = weight;
 }
 
 size_t MultiModalAttention::get_memory_usage() const {
@@ -187,7 +129,7 @@ size_t MultiModalAttention::get_memory_usage() const {
     for (const auto& [type, config] : modality_configs_) {
         total += config.embed_dim * sizeof(float);
     }
-    total += modality_weights_.size() * sizeof(float);
+    total += modality_configs_.size() * sizeof(float);
     return total;
 }
 
@@ -224,26 +166,6 @@ void MultiModalAttention::benchmark_performance(size_t iterations) {
     std::cout << "  Total time: " << duration.count() << "μs" << std::endl;
     std::cout << "  Average latency: " << static_cast<float>(duration.count()) / iterations << "μs" << std::endl;
     std::cout << "  Throughput: " << (iterations * 1000000.0f) / duration.count() << " ops/sec" << std::endl;
-}
-
-std::vector<float> MultiModalAttention::fuse_modalities(const std::vector<std::vector<float>>& modality_inputs) {
-    // Simple weighted fusion
-    size_t total_dim = 0;
-    for (const auto& input : modality_inputs) {
-        total_dim += input.size();
-    }
-    
-    std::vector<float> fused_output(total_dim, 0.0f);
-    size_t offset = 0;
-    
-    for (size_t i = 0; i < modality_inputs.size(); ++i) {
-        for (size_t j = 0; j < modality_inputs[i].size(); ++j) {
-            fused_output[offset + j] += modality_inputs[i][j] * modality_weights_[i];
-        }
-        offset += modality_inputs[i].size();
-    }
-    
-    return fused_output;
 }
 
 std::vector<float> MultiModalAttention::cross_modal_attention(const std::vector<float>& modality_a,
@@ -599,13 +521,7 @@ std::vector<float> SparseAttention::forward(const std::vector<float>& query,
 }
 
 std::vector<float> SparseAttention::forward(const std::vector<float>& input) {
-    // Split input into query, key, value (simplified)
-    size_t chunk_size = input.size() / 3;
-    std::vector<float> query(input.begin(), input.begin() + chunk_size);
-    std::vector<float> key(input.begin() + chunk_size, input.begin() + 2 * chunk_size);
-    std::vector<float> value(input.begin() + 2 * chunk_size, input.end());
-    
-    return forward(query, key, value);
+    return forward(input, input, input);
 }
 
 void SparseAttention::set_global_tokens(const std::vector<size_t>& global_indices) {
@@ -697,11 +613,15 @@ std::vector<float> SparseAttention::sparse_attention_computation(const std::vect
                                                                const std::vector<float>& value,
                                                                const std::vector<std::vector<bool>>& mask) {
     
-    std::vector<float> output(config_.seq_len * config_.embed_dim, 0.0f);
+    if (config_.embed_dim == 0) return {};
+    const size_t query_tokens = std::min(config_.seq_len, query.size() / config_.embed_dim);
+    const size_t kv_tokens = std::min({config_.seq_len, key.size() / config_.embed_dim,
+                                      value.size() / config_.embed_dim});
+    std::vector<float> output(query_tokens * config_.embed_dim, 0.0f);
     
     // Simplified sparse attention computation
-    for (size_t i = 0; i < config_.seq_len; ++i) {
-        for (size_t j = 0; j < config_.seq_len; ++j) {
+    for (size_t i = 0; i < query_tokens; ++i) {
+        for (size_t j = 0; j < kv_tokens; ++j) {
             if (mask[i][j]) {
                 // Compute attention weight
                 float score = 0.0f;
@@ -735,13 +655,7 @@ std::vector<float> LinearAttention::forward(const std::vector<float>& query,
 }
 
 std::vector<float> LinearAttention::forward(const std::vector<float>& input) {
-    // Split input into query, key, value (simplified)
-    size_t chunk_size = input.size() / 3;
-    std::vector<float> query(input.begin(), input.begin() + chunk_size);
-    std::vector<float> key(input.begin() + chunk_size, input.begin() + 2 * chunk_size);
-    std::vector<float> value(input.begin() + 2 * chunk_size, input.end());
-    
-    return forward(query, key, value);
+    return forward(input, input, input);
 }
 
 void LinearAttention::set_kernel_function(const std::string& kernel_type) {
@@ -800,13 +714,8 @@ float LinearAttention::kernel_function(float x) {
 std::vector<float> LinearAttention::apply_feature_map(const std::vector<float>& input) {
     size_t embed_dim = config_.embed_dim;
     size_t feature_dim = linear_config_.feature_dim;
-    size_t seq_len = (embed_dim > 0 && input.size() % embed_dim == 0)
-        ? (input.size() / embed_dim)
-        : 1;
-
-    if (seq_len == 1 && input.size() != embed_dim) {
-        seq_len = 1;
-    }
+    if (embed_dim == 0 || feature_dim == 0 || input.empty()) return {};
+    const size_t seq_len = std::max(size_t{1}, input.size() / embed_dim);
 
     std::vector<float> feature_mapped(seq_len * feature_dim, 0.0f);
 
@@ -827,16 +736,20 @@ std::vector<float> LinearAttention::linear_attention_computation(const std::vect
                                                           const std::vector<float>& key,
                                                           const std::vector<float>& value) {
     
+    if (config_.embed_dim == 0 || linear_config_.feature_dim == 0) return {};
+    const size_t query_tokens = std::min(config_.seq_len, query.size() / config_.embed_dim);
+    const size_t kv_tokens = std::min({config_.seq_len, key.size() / config_.embed_dim,
+                                      value.size() / config_.embed_dim});
     // Apply feature maps
     auto query_features = apply_feature_map(query);
     auto key_features = apply_feature_map(key);
     auto value_features = apply_feature_map(value);
     
-    std::vector<float> output(config_.seq_len * config_.embed_dim, 0.0f);
+    std::vector<float> output(query_tokens * config_.embed_dim, 0.0f);
     
     // Linear attention computation
-    for (size_t i = 0; i < config_.seq_len; ++i) {
-        for (size_t j = 0; j < config_.seq_len; ++j) {
+    for (size_t i = 0; i < query_tokens; ++i) {
+        for (size_t j = 0; j < kv_tokens; ++j) {
             float kv_score = 0.0f;
             for (size_t k = 0; k < linear_config_.feature_dim; ++k) {
                 kv_score += key_features[j * linear_config_.feature_dim + k] *
@@ -868,13 +781,7 @@ std::vector<float> LocalAttention::forward(const std::vector<float>& query,
 }
 
 std::vector<float> LocalAttention::forward(const std::vector<float>& input) {
-    // Split input into query, key, value (simplified)
-    size_t chunk_size = input.size() / 3;
-    std::vector<float> query(input.begin(), input.begin() + chunk_size);
-    std::vector<float> key(input.begin() + chunk_size, input.begin() + 2 * chunk_size);
-    std::vector<float> value(input.begin() + 2 * chunk_size, input.end());
-    
-    return forward(query, key, value);
+    return forward(input, input, input);
 }
 
 void LocalAttention::set_window_size(size_t window_size) {
@@ -943,14 +850,18 @@ std::vector<float> LocalAttention::local_attention_computation(const std::vector
                                                           const std::vector<float>& value,
                                                           const std::vector<std::pair<size_t, size_t>>& windows) {
     
-    std::vector<float> output(config_.seq_len * config_.embed_dim, 0.0f);
+    if (config_.embed_dim == 0) return {};
+    const size_t query_tokens = std::min(config_.seq_len, query.size() / config_.embed_dim);
+    const size_t kv_tokens = std::min({config_.seq_len, key.size() / config_.embed_dim,
+                                      value.size() / config_.embed_dim});
+    std::vector<float> output(query_tokens * config_.embed_dim, 0.0f);
     
     // Local attention computation within windows
     for (const auto& window : windows) {
         size_t window_size = window.second - window.first;
         
-        for (size_t i = window.first; i < window.second; ++i) {
-            for (size_t j = window.first; j < window.second; ++j) {
+        for (size_t i = window.first; i < std::min(window.second, query_tokens); ++i) {
+            for (size_t j = window.first; j < std::min(window.second, kv_tokens); ++j) {
                 // Compute attention weight
                 float score = 0.0f;
                 for (size_t k = 0; k < config_.embed_dim; ++k) {

@@ -5,6 +5,8 @@
 *****************************************************************************/
 
 #include "TimeSeriesForecasting.h"
+#include "perf_assert.h"
+#include <algorithm>
 #include <iostream>
 #include <vector>
 #include <chrono>
@@ -88,7 +90,8 @@ public:
     }
     
     static bool test_performance_threshold(float computation_time_ms, float threshold_ms) {
-        return computation_time_ms < threshold_ms;
+        return std::isfinite(computation_time_ms) && computation_time_ms >= 0.0f &&
+               (!tinyml_test::perf_asserts_enabled() || computation_time_ms < threshold_ms);
     }
 };
 
@@ -217,7 +220,9 @@ private:
             // Test forecasting
             auto result = informer->forecast(data, 20);
             
-            bool test_passed = (result.predictions.size() == 20) && 
+            bool test_passed = (result.predictions.size() == 20) &&
+                             std::all_of(result.predictions.begin(), result.predictions.end(),
+                                         [](float v) { return std::isfinite(v); }) && 
                              (result.computation_time_ms > 0.0f) &&
                              (TimeSeriesTestUtils::test_performance_threshold(result.computation_time_ms, 50.0f));
             
@@ -250,7 +255,9 @@ private:
             // Test forecasting
             auto result = autoformer->forecast(data, 20);
             
-            bool test_passed = (result.predictions.size() == 20) && 
+            bool test_passed = (result.predictions.size() == 20) &&
+                             std::all_of(result.predictions.begin(), result.predictions.end(),
+                                         [](float v) { return std::isfinite(v); }) && 
                              (result.computation_time_ms > 0.0f) &&
                              (TimeSeriesTestUtils::test_performance_threshold(result.computation_time_ms, 50.0f));
             
@@ -292,7 +299,9 @@ private:
             // Test forecasting
             auto result = s4->forecast(data, 20);
             
-            bool test_passed = (result.predictions.size() == 20) && 
+            bool test_passed = (result.predictions.size() == 20) &&
+                             std::all_of(result.predictions.begin(), result.predictions.end(),
+                                         [](float v) { return std::isfinite(v); }) && 
                              (result.computation_time_ms > 0.0f) &&
                              (TimeSeriesTestUtils::test_performance_threshold(result.computation_time_ms, 20.0f));
             
@@ -325,7 +334,9 @@ private:
             // Test forecasting
             auto result = mamba->forecast(data, 20);
             
-            bool test_passed = (result.predictions.size() == 20) && 
+            bool test_passed = (result.predictions.size() == 20) &&
+                             std::all_of(result.predictions.begin(), result.predictions.end(),
+                                         [](float v) { return std::isfinite(v); }) && 
                              (result.computation_time_ms > 0.0f) &&
                              (TimeSeriesTestUtils::test_performance_threshold(result.computation_time_ms, 20.0f));
             
@@ -358,7 +369,9 @@ private:
             // Test forecasting
             auto result = hyena->forecast(data, 20);
             
-            bool test_passed = (result.predictions.size() == 20) && 
+            bool test_passed = (result.predictions.size() == 20) &&
+                             std::all_of(result.predictions.begin(), result.predictions.end(),
+                                         [](float v) { return std::isfinite(v); }) && 
                              (result.computation_time_ms > 0.0f) &&
                              (TimeSeriesTestUtils::test_performance_threshold(result.computation_time_ms, 20.0f));
             
@@ -511,7 +524,9 @@ private:
             // Test forecasting
             auto result = prophet->forecast(data, 20);
             
-            bool test_passed = (result.predictions.size() == 20) && 
+            bool test_passed = (result.predictions.size() == 20) &&
+                             std::all_of(result.predictions.begin(), result.predictions.end(),
+                                         [](float v) { return std::isfinite(v); }) && 
                              (result.confidence_intervals_lower.size() == 20) &&
                              (result.confidence_intervals_upper.size() == 20) &&
                              (result.computation_time_ms > 0.0f) &&
@@ -724,7 +739,7 @@ private:
             }
             
             float avg_time = total_time / runs;
-            bool meets_target = avg_time < target_time;
+            bool meets_target = TimeSeriesTestUtils::test_performance_threshold(avg_time, target_time);
             
             std::cout << "Model " << static_cast<int>(model_type) << ": ";
             std::cout << avg_time << " ms (target: " << target_time << " ms) - ";

@@ -689,8 +689,8 @@ void TransformerForecaster::initialize_network() {
         for (auto& w : embedding_weights_) w = dist(gen);
     }
     
-    projection_weights_.resize(config_.input_dim * config_.d_model);
-    projection_bias_.resize(config_.input_dim);
+    projection_weights_.resize(config_.pred_len * config_.d_model);
+    projection_bias_.resize(config_.pred_len);
     
     for (auto& w : projection_weights_) w = dist(gen);
     for (auto& b : projection_bias_) b = 0.0f;
@@ -1175,7 +1175,7 @@ void StateSpaceModel::initialize_network() {
     std::normal_distribution<float> dist(0.0f, 0.02f);
     
     embedding_weights_.resize(config_.d_model * config_.input_dim);
-    projection_weights_.resize(config_.input_dim * config_.d_model);
+    projection_weights_.resize(config_.pred_len * config_.d_model);
     
     for (auto& w : embedding_weights_) w = dist(gen);
     for (auto& w : projection_weights_) w = dist(gen);
@@ -1212,7 +1212,7 @@ ForecastResult StateSpaceModel::forecast(const TimeSeriesData& data, size_t hori
     }
     
     // Project to output
-    for (size_t i = 0; i < horizon && i < current.size(); ++i) {
+    for (size_t i = 0; i < horizon && i < config_.pred_len; ++i) {
         result.predictions[i] = 0.0f;
         for (size_t j = 0; j < config_.d_model; ++j) {
             result.predictions[i] += current[j] * projection_weights_[i * config_.d_model + j];

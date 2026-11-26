@@ -101,7 +101,11 @@ TEST_F(Phase7AdvancedAttentionTest, MultiModalAttention) {
         multi_modal_attention->add_modality(sensor_config);
         
         auto output_with_sensor = attention->forward(test_input);
-        EXPECT_GT(output_with_sensor.size(), output.size()) << "Output should be larger with new modality";
+        ASSERT_EQ(output_with_sensor.size(), output.size() + sensor_config.embed_dim);
+        for (size_t i = output.size(); i < output_with_sensor.size(); ++i)
+            EXPECT_FLOAT_EQ(output_with_sensor[i], 0.0f);
+        multi_modal_attention->remove_modality(ML::Advanced::ModalityType::SENSOR);
+        EXPECT_EQ(attention->forward(test_input).size(), output.size());
     }
     
     std::cout << "Multi-modal attention: PASS\n";
@@ -324,6 +328,25 @@ TEST_F(Phase7AdvancedAttentionTest, LocalAttention) {
     EXPECT_LT(memory_usage, 1024 * 1024) << "Memory usage should be reasonable";
     
     std::cout << "Local attention: PASS\n";
+}
+
+// A configured sequence length is a capacity, not a guarantee that every
+// input contains that many complete tokens.
+TEST_F(Phase7AdvancedAttentionTest, ShortSequenceAttention) {
+    ML::Advanced::AdvancedAttention::Config config;
+    config.embed_dim = embed_dim;
+    config.seq_len = seq_len;
+    for (auto type : {ML::Advanced::AttentionType::SPARSE,
+                      ML::Advanced::AttentionType::LINEAR,
+                      ML::Advanced::AttentionType::LOCAL}) {
+        auto attention = ML::Advanced::AdvancedAttentionFactory::create_attention(type, config);
+        EXPECT_EQ(attention->forward(test_input).size(), embed_dim);
+        std::vector<float> two_tokens(2 * embed_dim + 1, 0.25f);
+        auto result = attention->forward(two_tokens, two_tokens, two_tokens);
+        ASSERT_EQ(result.size(), 2 * embed_dim);
+        for (float value : result)
+            EXPECT_TRUE(std::isfinite(value));
+    }
 }
 
 // Test Advanced Transformer Block

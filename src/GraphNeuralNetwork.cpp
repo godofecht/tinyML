@@ -9,6 +9,7 @@
 #include <cassert>
 #include <algorithm>
 #include <numeric>
+#include <stdexcept>
 
 namespace ML {
 namespace GNN {
@@ -255,6 +256,8 @@ void MessagePassingLayer::forward(const GraphStructure& graph,
                                  const std::vector<float>& input_features,
                                  std::vector<float>& output_features) {
     size_t num_nodes = graph.num_nodes();
+    if (input_features.size() != num_nodes * input_dim)
+        throw std::invalid_argument("MessagePassingLayer input feature shape mismatch");
     std::vector<std::vector<float>> messages(num_nodes);
     
     // Message phase
@@ -755,24 +758,20 @@ void TemporalGraphLayer::update_function(const std::vector<float>& aggregated,
 void TemporalGraphLayer::forward_temporal(const std::vector<GraphStructure>& graph_sequence,
                                          const std::vector<std::vector<float>>& feature_sequence,
                                          std::vector<float>& output_features) {
-    if (graph_sequence.empty() || feature_sequence.empty()) return;
-    
-    size_t current_time = 0;
-    std::vector<float> current_features = feature_sequence[0];
-    
+    if (graph_sequence.size() != feature_sequence.size())
+        throw std::invalid_argument("Temporal graph and feature sequence lengths differ");
+    output_features.clear();
     for (size_t t = 0; t < time_steps && t < graph_sequence.size(); ++t) {
-        // Apply temporal decay
+        auto current_features = feature_sequence[t];
         apply_temporal_decay(current_features, t);
-        
-        // Forward pass through current graph
-        std::vector<float> temp_output;
-        forward(graph_sequence[t], current_features, temp_output);
-        
-        current_features = temp_output;
-        current_time = t;
+        std::vector<float> next_output;
+        forward(graph_sequence[t], current_features, next_output);
+        if (output_features.size() == next_output.size()) {
+            for (size_t i = 0; i < next_output.size(); ++i)
+                next_output[i] += time_decay_factor * output_features[i];
+        }
+        output_features = std::move(next_output);
     }
-    
-    output_features = current_features;
 }
 
 void TemporalGraphLayer::apply_temporal_decay(std::vector<float>& features, size_t time_step) const {
