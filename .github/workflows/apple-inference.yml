@@ -1,0 +1,38 @@
+name: Apple inference
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  apple:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0 -DTINYML_BUILD_EXTENDED=OFF -DTINYML_BUILD_TESTS=ON -DTINYML_ENABLE_MPS=ON -DTINYML_ENABLE_NPU=ON
+      - name: Build
+        run: cmake --build build --parallel 2
+      - name: CPU and MPS parity
+        run: ctest --test-dir build --output-on-failure
+      - name: Export and run Core ML fixture
+        run: |
+          python -m pip install 'coremltools>=8,<10' numpy
+          ./build/TinyMLInferenceSmoke --export-fixture
+          python scripts/export_coreml.py --topology 2 3 2 --weights apple-fixture.txt --output fixture.mlpackage
+          mkdir -p compiled
+          xcrun coremlcompiler compile fixture.mlpackage compiled
+          ./build/TinyMLInferenceSmoke --npu compiled/fixture.mlmodelc
+      - name: Install package
+        run: cmake --install build --prefix "$PWD/install"
+      - name: Installed consumer
+        run: |
+          cmake -S tests/install_consumer -B consumer-build -DCMAKE_PREFIX_PATH="$PWD/install"
+          cmake --build consumer-build --parallel 2
+          ./consumer-build/tinyml_install_consumer

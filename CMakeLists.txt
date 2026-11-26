@@ -27,6 +27,19 @@ option(TINYML_BUILD_EXAMPLES "Build example executables" OFF)
 option(TINYML_BUILD_PLAYGROUND "Build the interactive playground server" OFF)
 option(TINYML_FETCH_DEPENDENCIES "Fetch missing third-party build dependencies" ${TINYML_TOP_LEVEL})
 option(TINYML_ENABLE_WARNINGS "Enable compiler warnings for TinyML targets" ${TINYML_TOP_LEVEL})
+option(TINYML_ENABLE_MPS "Enable Apple MPSGraph inference" OFF)
+option(TINYML_ENABLE_NPU "Enable Apple Core ML CPU/Neural Engine inference" OFF)
+
+if(TINYML_ENABLE_MPS OR TINYML_ENABLE_NPU)
+    if(NOT CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        message(FATAL_ERROR "TinyML Apple inference requires macOS")
+    endif()
+    if(CMAKE_OSX_DEPLOYMENT_TARGET AND CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS 13.0)
+        message(FATAL_ERROR "TinyML Apple inference requires macOS 13 or later")
+    endif()
+    enable_language(OBJCXX)
+endif()
+
 option(TINYML_ENABLE_LTO "Enable interprocedural optimization when supported" OFF)
 
 if(TINYML_BUILD_BENCHMARKS AND NOT TINYML_BUILD_EXTENDED)
@@ -86,6 +99,7 @@ configure_file(
 set(TINYML_CORE_SOURCES
     src/NN.cpp
     src/Network.cpp
+    src/Inference.cpp
 )
 
 set(TINYML_CORE_HEADERS
@@ -105,6 +119,21 @@ set_target_properties(
         SOVERSION ${PROJECT_VERSION_MAJOR}
 )
 tinyml_configure_target(TinyMLCore)
+target_compile_definitions(TinyMLCore PRIVATE
+    TINYML_ENABLE_MPS=$<BOOL:${TINYML_ENABLE_MPS}>
+    TINYML_ENABLE_NPU=$<BOOL:${TINYML_ENABLE_NPU}>)
+if(TINYML_ENABLE_MPS OR TINYML_ENABLE_NPU)
+    target_sources(TinyMLCore PRIVATE src/AppleInference.mm)
+    set_target_properties(TinyMLCore PROPERTIES OBJCXX_STANDARD 17 OBJCXX_STANDARD_REQUIRED ON)
+    target_compile_options(TinyMLCore PRIVATE $<$<COMPILE_LANGUAGE:OBJCXX>:-fobjc-arc>)
+    target_link_libraries(TinyMLCore PRIVATE "-framework Foundation")
+    if(TINYML_ENABLE_MPS)
+        target_link_libraries(TinyMLCore PRIVATE "-framework Metal" "-framework MetalPerformanceShaders" "-framework MetalPerformanceShadersGraph")
+    endif()
+    if(TINYML_ENABLE_NPU)
+        target_link_libraries(TinyMLCore PRIVATE "-framework CoreML")
+    endif()
+endif()
 
 set(TINYML_EXTENDED_HEADERS
     include/AdvancedAttention.h
@@ -228,6 +257,14 @@ if(TINYML_BUILD_TESTS)
     target_compile_features(TinyMLCoreSmoke PRIVATE cxx_std_17)
     add_test(NAME TinyMLCoreSmoke COMMAND TinyMLCoreSmoke)
 
+    add_executable(TinyMLInferenceSmoke tests/inference_smoke.cpp)
+    target_link_libraries(TinyMLInferenceSmoke PRIVATE TinyMLCore)
+    add_test(NAME TinyMLInferenceCPU COMMAND TinyMLInferenceSmoke)
+    if(TINYML_ENABLE_MPS)
+        add_test(NAME TinyMLInferenceMPS COMMAND TinyMLInferenceSmoke --mps)
+        set_tests_properties(TinyMLInferenceMPS PROPERTIES SKIP_RETURN_CODE 77)
+    endif()
+
     if(TINYML_BUILD_EXTENDED)
         function(tinyml_add_gtest target)
             add_executable(${target} ${ARGN})
@@ -327,7 +364,7 @@ install(
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 )
 install(
-    FILES include/tinyml/core.hpp
+    FILES include/tinyml/core.hpp include/tinyml/inference.hpp
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/tinyml
 )
 install(

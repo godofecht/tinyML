@@ -4,3 +4,5 @@
 #include <Model.h>
 #include <Network.h>
 #include <NN.h>
+
+#include <tinyml/inference.hpp>

@@ -254,3 +254,7 @@ For a school project this means you can use any part of tinyML, as long as you a
 - [xsimd](https://github.com/xtensor-stack/xsimd) (BSD 3-Clause) for SIMD in the extended build.
 - [GoogleTest](https://github.com/google/googletest) for the test suites.
 - [cpp-httplib](https://github.com/yhirose/cpp-httplib) by Yuji Hirose and [JSON for Modern C++](https://github.com/nlohmann/json) by Niels Lohmann, both MIT, for the playground server.
+
+### Apple inference SDK (experimental)
+
+Opt in with `-DTINYML_ENABLE_MPS=ON` and/or `-DTINYML_ENABLE_NPU=ON` on macOS. See [Apple inference SDK](docs/APPLE_INFERENCE.md) for backend selection, Core ML export, and Neural Engine fallback limitations.
